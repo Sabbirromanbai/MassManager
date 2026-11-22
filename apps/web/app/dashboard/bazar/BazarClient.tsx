@@ -26,11 +26,11 @@ interface BazarClientProps {
 }
 
 const cardClass =
-  "glass-strong rounded-2xl border border-white/10 p-4 md:p-5 transition-all duration-200";
+  "glass-strong rounded-2xl border app-border p-4 md:p-5 transition-all duration-200";
 const fieldClass =
-  "glass w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none transition-colors focus:ring-2 focus:ring-emerald-500 placeholder:text-white/40";
+  "glass w-full min-w-0 rounded-xl px-3 py-2.5 text-sm app-text outline-none transition-colors focus:border-emerald-500/40 focus:ring-2 focus:ring-emerald-500/60 disabled:cursor-not-allowed disabled:opacity-60 placeholder:app-text-faint";
 const labelClass =
-  "mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/60";
+  "mb-1.5 block text-xs font-medium uppercase tracking-wide app-text-muted";
 
 async function readServerError(
   response: Response,
@@ -221,14 +221,14 @@ export function BazarClient({
       {isManager && (
         <section className={cardClass}>
           <div className="mb-4 flex items-center gap-2.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500/25 to-orange-700/15 text-orange-300">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl app-icon-orange">
               <ShoppingCart className="size-4" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-white">
+              <h3 className="text-base font-semibold app-text">
                 {t(lang, "pages.bazar.addEntry")}
               </h3>
-              <p className="text-xs text-white/50">
+              <p className="text-xs app-text-faint">
                 {t(lang, "pages.bazar.entryHint")}
               </p>
             </div>
@@ -236,10 +236,11 @@ export function BazarClient({
 
           <div className="grid gap-3 md:grid-cols-3">
             <div>
-              <label className={labelClass}>
+              <label htmlFor="bazar-date" className={labelClass}>
                 {t(lang, "pages.bazar.dateLabel")}
               </label>
               <select
+                id="bazar-date"
                 value={date}
                 onChange={(event) => setDate(event.target.value)}
                 className={fieldClass}
@@ -254,10 +255,11 @@ export function BazarClient({
             </div>
 
             <div className="md:col-span-1">
-              <label className={labelClass}>
+              <label htmlFor="bazar-description" className={labelClass}>
                 {t(lang, "pages.bazar.descriptionLabel")}
               </label>
               <input
+                id="bazar-description"
                 type="text"
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
@@ -268,11 +270,13 @@ export function BazarClient({
             </div>
 
             <div>
-              <label className={labelClass}>
+              <label htmlFor="bazar-amount" className={labelClass}>
                 {t(lang, "pages.bazar.amountLabel")}
               </label>
               <input
+                id="bazar-amount"
                 type="number"
+                inputMode="decimal"
                 min="0"
                 step="0.01"
                 value={amount}
@@ -286,13 +290,13 @@ export function BazarClient({
 
           <div className="mt-4 flex flex-wrap gap-2">
             <Button
-              className="glass rounded-xl bg-emerald-500 text-white transition-colors hover:bg-emerald-500/90 disabled:opacity-60"
+              className="app-primary-button rounded-xl disabled:opacity-60"
               onClick={handleSubmit}
               disabled={isSaving}
             >
               {isSaving ? (
                 <span className="flex items-center gap-2">
-                  <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  <span className="app-spinner" aria-hidden="true" />
                   ...
                 </span>
               ) : editingId ? (
@@ -304,7 +308,7 @@ export function BazarClient({
             {editingId && (
               <Button
                 variant="ghost"
-                className="glass rounded-xl text-white transition-colors hover:bg-white/10"
+                className="glass rounded-xl app-text transition-colors hover:app-surface-strong"
                 onClick={resetForm}
                 disabled={isSaving}
               >
@@ -317,7 +321,7 @@ export function BazarClient({
             <p
               role="alert"
               aria-live="assertive"
-              className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+              className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm app-text-danger"
             >
               {error}
             </p>
@@ -325,7 +329,7 @@ export function BazarClient({
           {success && (
             <p
               role="status"
-              className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300"
+              className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm app-text-emerald"
             >
               {success}
             </p>
@@ -334,21 +338,21 @@ export function BazarClient({
       )}
 
       <section className={cardClass}>
-        <div className="mb-4 flex items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/25 to-emerald-700/15 text-emerald-300">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl app-icon-emerald">
               <Wallet className="size-4" />
             </div>
-            <div>
-              <h3 className="text-base font-semibold text-white">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold app-text">
                 {t(lang, "pages.bazar.monthlyTotal")}
               </h3>
-              <p className="text-xs text-white/50">
+              <p className="text-xs app-text-faint">
                 {entries.length} {t(lang, "pages.bazar.history").toLowerCase()}
               </p>
             </div>
           </div>
-          <p className="text-2xl font-bold text-white">
+          <p className="shrink-0 text-lg font-bold tabular-nums app-text sm:text-2xl">
             {formatAmount(total, lang)}
           </p>
         </div>
@@ -356,16 +360,16 @@ export function BazarClient({
 
       <section className={cardClass}>
         <div className="mb-4 flex items-center gap-2.5">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/25 to-emerald-700/15 text-emerald-300">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl app-icon-emerald">
             <ShoppingCart className="size-4" />
           </div>
-          <h3 className="text-base font-semibold text-white">
+          <h3 className="text-base font-semibold app-text">
             {t(lang, "pages.bazar.history")}
           </h3>
         </div>
 
         {empty ? (
-          <p className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/50">
+          <p className="rounded-lg border app-border app-surface px-3 py-2 text-sm app-text-faint">
             {t(lang, "pages.bazar.noEntries")}
           </p>
         ) : (
@@ -373,27 +377,27 @@ export function BazarClient({
             {entries.map((entry) => (
               <div
                 key={entry.id}
-                className="glass flex items-center justify-between gap-3 rounded-xl p-3 transition-colors hover:bg-white/10"
+                className="glass flex flex-col gap-2 rounded-xl p-3 transition-colors hover:app-surface-strong sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex size-10 shrink-0 flex-col items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
+                  <div className="flex size-10 shrink-0 flex-col items-center justify-center rounded-xl app-tint-emerald app-text-emerald">
                     <span className="text-sm font-bold leading-none">{entry.date}</span>
                     <span className="text-[9px] uppercase tracking-wide">
                       {weekdayLabel(entry.day).slice(0, 3)}
                     </span>
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-white">
+                    <p className="truncate text-sm font-medium app-text">
                       {entry.description}
                     </p>
-                    <p className="text-xs text-white/60">
+                    <p className="truncate text-xs app-text-muted">
                       {entry.date} — {weekdayLabel(entry.day)}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-3">
-                  <p className="font-semibold text-white">
+                <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
+                  <p className="font-semibold tabular-nums app-text">
                     {formatAmount(entry.amount, lang)}
                   </p>
                   {isManager && (
@@ -401,7 +405,7 @@ export function BazarClient({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-8 rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                        className="size-8 rounded-lg app-text-muted transition-colors hover:app-surface-strong hover:app-text"
                         onClick={() => handleEdit(entry)}
                         disabled={isSaving || deletingId === entry.id}
                         aria-label={t(lang, "pages.bazar.updateButton")}
@@ -411,7 +415,7 @@ export function BazarClient({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-8 rounded-lg text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200"
+                        className="size-8 rounded-lg app-text-danger transition-colors hover:bg-red-500/10 hover:text-red-200"
                         onClick={() => handleDelete(entry.id)}
                         disabled={isSaving || deletingId === entry.id}
                         aria-label={t(lang, "pages.bazar.removeButton")}

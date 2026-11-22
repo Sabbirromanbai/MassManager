@@ -33,11 +33,11 @@ interface AdvanceClientProps {
 }
 
 const cardClass =
-  "glass-strong rounded-2xl border border-white/10 p-4 md:p-5 transition-all duration-200";
+  "glass-strong rounded-2xl border app-border p-4 md:p-5 transition-all duration-200";
 const fieldClass =
-  "glass w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none transition-colors focus:ring-2 focus:ring-emerald-500 placeholder:text-white/40";
+  "glass w-full min-w-0 rounded-xl px-3 py-2.5 text-sm app-text outline-none transition-colors focus:border-emerald-500/40 focus:ring-2 focus:ring-emerald-500/60 disabled:cursor-not-allowed disabled:opacity-60 placeholder:app-text-faint";
 const labelClass =
-  "mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/60";
+  "mb-1.5 block text-xs font-medium uppercase tracking-wide app-text-muted";
 
 async function readServerError(
   response: Response,
@@ -243,14 +243,14 @@ export function AdvanceClient({
       {isManager && (
         <section className={cardClass}>
           <div className="mb-4 flex items-center gap-2.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/25 to-emerald-700/15 text-emerald-300">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl app-icon-emerald">
               <Wallet className="size-4" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-white">
+              <h3 className="text-base font-semibold app-text">
                 {t(lang, "pages.advance.addEntry")}
               </h3>
-              <p className="text-xs text-white/50">
+              <p className="text-xs app-text-faint">
                 {t(lang, "pages.advance.entryHint")}
               </p>
             </div>
@@ -258,10 +258,11 @@ export function AdvanceClient({
 
           <div className="grid gap-3 md:grid-cols-3">
             <div>
-              <label className={labelClass}>
+              <label htmlFor="advance-member" className={labelClass}>
                 {t(lang, "pages.advance.memberLabel")}
               </label>
               <select
+                id="advance-member"
                 value={memberId}
                 onChange={(event) => setMemberId(event.target.value)}
                 className={fieldClass}
@@ -276,10 +277,11 @@ export function AdvanceClient({
             </div>
 
             <div>
-              <label className={labelClass}>
+              <label htmlFor="advance-date" className={labelClass}>
                 {t(lang, "pages.advance.dateLabel")}
               </label>
               <select
+                id="advance-date"
                 value={date}
                 onChange={(event) => setDate(event.target.value)}
                 className={fieldClass}
@@ -294,11 +296,13 @@ export function AdvanceClient({
             </div>
 
             <div>
-              <label className={labelClass}>
+              <label htmlFor="advance-amount" className={labelClass}>
                 {t(lang, "pages.advance.amountLabel")}
               </label>
               <input
+                id="advance-amount"
                 type="number"
+                inputMode="decimal"
                 min="0"
                 step="0.01"
                 value={amount}
@@ -312,13 +316,13 @@ export function AdvanceClient({
 
           <div className="mt-4 flex flex-wrap gap-2">
             <Button
-              className="glass rounded-xl bg-emerald-500 text-white transition-colors hover:bg-emerald-500/90 disabled:opacity-60"
+              className="app-primary-button rounded-xl disabled:opacity-60"
               onClick={handleSubmit}
               disabled={isSaving}
             >
               {isSaving ? (
                 <span className="flex items-center gap-2">
-                  <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  <span className="app-spinner" aria-hidden="true" />
                   ...
                 </span>
               ) : editingId ? (
@@ -330,7 +334,7 @@ export function AdvanceClient({
             {editingId && (
               <Button
                 variant="ghost"
-                className="glass rounded-xl text-white transition-colors hover:bg-white/10"
+                className="glass rounded-xl app-text transition-colors hover:app-surface-strong"
                 onClick={resetForm}
                 disabled={isSaving}
               >
@@ -343,7 +347,7 @@ export function AdvanceClient({
             <p
               role="alert"
               aria-live="assertive"
-              className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+              className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm app-text-danger"
             >
               {error}
             </p>
@@ -351,7 +355,7 @@ export function AdvanceClient({
           {success && (
             <p
               role="status"
-              className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300"
+              className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm app-text-emerald"
             >
               {success}
             </p>
@@ -360,57 +364,59 @@ export function AdvanceClient({
       )}
 
       <section className={cardClass}>
-        <div className="mb-4 flex items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/25 to-emerald-700/15 text-emerald-300">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl app-icon-emerald">
               <Wallet className="size-4" />
             </div>
-            <div>
-              <h3 className="text-base font-semibold text-white">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold app-text">
                 {t(lang, "pages.advance.monthlyTotal")}
               </h3>
-              <p className="text-xs text-white/50">
+              <p className="text-xs app-text-faint">
                 {entries.length} {t(lang, "pages.advance.history").toLowerCase()}
               </p>
             </div>
           </div>
-          <p className="text-2xl font-bold text-white">
+          <p className="shrink-0 text-lg font-bold tabular-nums app-text sm:text-2xl">
             {formatAmount(total, lang)}
           </p>
         </div>
 
         {isManager && memberTotals.length > 0 && (
-          <div className="mb-4 space-y-1.5 border-t border-white/10 pt-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-white/50">
+          <div className="mb-4 space-y-1.5 border-t app-border pt-3">
+            <p className="text-xs font-medium uppercase tracking-wide app-text-faint">
               {t(lang, "pages.advance.memberTotals")}
             </p>
-            {memberTotals.map((member) => (
-              <div
-                key={member.id}
-                className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-1.5 text-sm"
-              >
-                <span className="text-white/80">{member.name}</span>
-                <span className="font-medium text-white">
-                  {formatAmount(member.total, lang)}
-                </span>
-              </div>
-            ))}
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {memberTotals.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex min-w-0 items-center justify-between gap-2 rounded-lg app-surface px-3 py-1.5 text-sm"
+                >
+                  <span className="truncate app-text-muted">{member.name}</span>
+                  <span className="shrink-0 font-medium tabular-nums app-text">
+                    {formatAmount(member.total, lang)}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </section>
 
       <section className={cardClass}>
         <div className="mb-4 flex items-center gap-2.5">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/25 to-emerald-700/15 text-emerald-300">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl app-icon-emerald">
             <User className="size-4" />
           </div>
-          <h3 className="text-base font-semibold text-white">
+          <h3 className="text-base font-semibold app-text">
             {t(lang, "pages.advance.history")}
           </h3>
         </div>
 
         {empty ? (
-          <p className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/50">
+          <p className="rounded-lg border app-border app-surface px-3 py-2 text-sm app-text-faint">
             {t(lang, "pages.advance.noEntries")}
           </p>
         ) : (
@@ -418,27 +424,27 @@ export function AdvanceClient({
             {entries.map((entry) => (
               <div
                 key={entry.id}
-                className="glass flex items-center justify-between gap-3 rounded-xl p-3 transition-colors hover:bg-white/10"
+                className="glass flex flex-col gap-2 rounded-xl p-3 transition-colors hover:app-surface-strong sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex size-10 shrink-0 flex-col items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
+                  <div className="flex size-10 shrink-0 flex-col items-center justify-center rounded-xl app-tint-emerald app-text-emerald">
                     <span className="text-sm font-bold leading-none">{entry.date}</span>
                     <span className="text-[9px] uppercase tracking-wide">
                       {weekdayLabel(entry.date).slice(0, 3)}
                     </span>
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-white">
+                    <p className="truncate text-sm font-medium app-text">
                       {entry.memberName}
                     </p>
-                    <p className="text-xs text-white/60">
+                    <p className="truncate text-xs app-text-muted">
                       {entry.date} — {weekdayLabel(entry.date)}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-3">
-                  <p className="font-semibold text-white">
+                <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
+                  <p className="font-semibold tabular-nums app-text">
                     {formatAmount(entry.amount, lang)}
                   </p>
                   {isManager && (
@@ -446,7 +452,7 @@ export function AdvanceClient({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-8 rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                        className="size-8 rounded-lg app-text-muted transition-colors hover:app-surface-strong hover:app-text"
                         onClick={() => handleEdit(entry)}
                         disabled={isSaving || deletingId === entry.id}
                         aria-label={t(lang, "pages.advance.updateButton")}
@@ -456,7 +462,7 @@ export function AdvanceClient({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-8 rounded-lg text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200"
+                        className="size-8 rounded-lg app-text-danger transition-colors hover:bg-red-500/10 hover:text-red-200"
                         onClick={() => handleDelete(entry.id)}
                         disabled={isSaving || deletingId === entry.id}
                         aria-label={t(lang, "pages.advance.removeButton")}

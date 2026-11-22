@@ -110,7 +110,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         icon={<LayoutDashboard className="size-5" />}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
         <StatCard
           title={t(lang, "summary.totalBazar")}
           value={formatCurrency(stats.totalBazar)}
@@ -151,36 +151,36 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="glass-strong rounded-2xl border border-white/15 p-5 md:p-6 animate-fade-in-up delay-1 hover-lift">
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+        <section className="glass-strong rounded-2xl border app-border p-5 md:p-6 animate-fade-in-up delay-1 hover-lift">
           <div className="mb-4 flex items-center gap-2.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl app-tint-emerald app-text-emerald">
               <UtensilsCrossed className="size-4" />
             </div>
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-base font-semibold app-text sm:text-lg">
               {t(lang, "pages.dashboard.mealOverview")}
             </h2>
           </div>
-          <MealChart data={stats.mealsPerMember} />
+          <MealChart data={stats.mealsPerMember} lang={lang} />
         </section>
 
-        <section className="glass-strong rounded-2xl border border-white/15 p-5 md:p-6 animate-fade-in-up delay-2 hover-lift">
+        <section className="glass-strong rounded-2xl border app-border p-5 md:p-6 animate-fade-in-up delay-2 hover-lift">
           <div className="mb-4 flex items-center gap-2.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-500/15 text-orange-400">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl app-tint-orange app-text-orange">
               <Wallet className="size-4" />
             </div>
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-base font-semibold app-text sm:text-lg">
               {t(lang, "pages.dashboard.financialSummary")}
             </h2>
           </div>
-          <FinancialChart data={stats.dailyBazar} />
+          <FinancialChart data={stats.dailyBazar} lang={lang} />
         </section>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="glass-strong rounded-2xl border border-white/15 p-5 md:p-6 lg:col-span-2 animate-fade-in-up delay-3">
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
+        <section className="glass-strong rounded-2xl border app-border p-5 md:p-6 lg:col-span-2 animate-fade-in-up delay-3">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-base font-semibold app-text sm:text-lg">
               {t(lang, "quickActions.title")}
             </h2>
           </div>
@@ -214,12 +214,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </div>
         </section>
 
-        <section className="glass-strong rounded-2xl border border-white/15 p-5 md:p-6 animate-fade-in-up delay-4">
+        <section className="glass-strong rounded-2xl border app-border p-5 md:p-6 animate-fade-in-up delay-4">
           <div className="mb-4 flex items-center gap-2.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl app-tint-emerald app-text-emerald">
               <Users className="size-4" />
             </div>
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-base font-semibold app-text sm:text-lg">
               {t(lang, "pages.dashboard.ourMembers")}
             </h2>
           </div>
@@ -227,19 +227,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             {membersWithMeals.map((member) => (
               <div
                 key={member._id?.toString()}
-                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 transition-colors hover:bg-white/10"
+                className="flex items-center justify-between rounded-xl border app-border app-surface px-3 py-2.5 transition-colors hover:app-surface-strong"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500/25 to-emerald-700/15">
-                    <span className="text-sm font-semibold text-emerald-300">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full app-icon-emerald">
+                    <span className="text-sm font-semibold app-text-emerald">
                       {member.name.charAt(0)}
                     </span>
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-white">
+                    <p className="truncate text-sm font-medium app-text">
                       {member.name}
                     </p>
-                    <p className="text-xs text-white/60">
+                    <p className="text-xs app-text-muted">
                       {t(lang, "pages.dashboard.mealsThisMonth").replace(
                         "{count}",
                         member.mealCount.toString()
@@ -271,13 +271,13 @@ interface StatCardProps {
 function StatCard({ title, value, icon, iconTint, variant, delay = 0 }: StatCardProps) {
   const tintClass =
     iconTint === "red"
-      ? "bg-gradient-to-br from-orange-500/25 to-orange-700/15 text-orange-300"
-      : "bg-gradient-to-br from-emerald-500/25 to-emerald-700/15 text-emerald-300";
+      ? "app-icon-orange"
+      : "app-icon-emerald";
   const delayClass = delay > 0 ? `delay-${Math.min(delay, 5)}` : "";
   return (
     <div
       className={cn(
-        "glass rounded-2xl border border-white/15 p-5 hover-lift animate-fade-in-up transition-colors",
+        "glass rounded-2xl border app-border p-5 hover-lift animate-fade-in-up transition-colors",
         delayClass,
         variant === "negative" && "border-red-500/30"
       )}
@@ -288,10 +288,10 @@ function StatCard({ title, value, icon, iconTint, variant, delay = 0 }: StatCard
         </div>
       </div>
       <div className="mt-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-white/60">
+        <p className="text-xs font-medium uppercase tracking-wide app-text-muted">
           {title}
         </p>
-        <p className="mt-1 text-2xl font-bold text-white">{value}</p>
+        <p className="mt-1 break-words text-xl font-bold tabular-nums app-text sm:text-2xl">{value}</p>
       </div>
     </div>
   );
@@ -309,14 +309,14 @@ function ActionLink({ href, icon, label, fullWidth }: ActionLinkProps) {
     <Link
       href={href}
       className={cn(
-        "glass group flex flex-col items-center justify-center gap-2 rounded-2xl border border-white/15 p-4 text-center transition-colors hover:bg-white/10 hover-glow",
-        fullWidth && "lg:col-span-3"
+        "glass group flex flex-col items-center justify-center gap-2 rounded-2xl border app-border p-4 text-center transition-colors hover:app-surface-strong hover-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70",
+        fullWidth && "sm:col-span-3"
       )}
     >
-      <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 transition-transform duration-200 group-hover:scale-110">
+      <div className="flex size-10 items-center justify-center rounded-xl app-tint-emerald app-text-emerald transition-transform duration-200 group-hover:scale-110">
         {icon}
       </div>
-      <span className="text-sm font-medium text-white">{label}</span>
+      <span className="text-sm font-medium app-text">{label}</span>
     </Link>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTheme } from "next-themes";
 import {
   PieChart,
   Pie,
@@ -8,7 +9,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { cn } from "cn";
+import { Lang, t } from "@/lib/lang";
 
 interface MealData {
   name: string;
@@ -17,6 +18,7 @@ interface MealData {
 
 interface MealChartProps {
   data: MealData[];
+  lang?: Lang;
 }
 
 const EMERALD_SHADES = [
@@ -32,14 +34,17 @@ const EMERALD_SHADES = [
 
 const ORANGE_ACCENT = "#f97316";
 
-export function MealChart({ data }: MealChartProps) {
+export function MealChart({ data, lang = "bn" }: MealChartProps) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
   if (data.length === 0) {
     return (
-      <div className="flex h-64 w-full items-center justify-center">
-        <div className="text-center">
-          <p className="font-medium text-white/80">No data yet</p>
-          <p className="mt-1 text-sm text-white/50">
-            Meal entries will appear here
+      <div className="flex h-64 w-full items-center justify-center px-4 text-center">
+        <div>
+          <p className="font-medium app-text">{t(lang, "common.noDataYet")}</p>
+          <p className="mt-1 text-sm app-text-faint">
+            {t(lang, "common.mealEntriesWillAppear")}
           </p>
         </div>
       </div>
@@ -47,7 +52,19 @@ export function MealChart({ data }: MealChartProps) {
   }
 
   const totalMeals = data.reduce((sum, d) => sum + d.meals, 0);
-  const maxIndex = data.reduce((maxIdx, d, i) => (d.meals > (data[maxIdx]?.meals ?? 0) ? i : maxIdx), 0);
+  const maxIndex = data.reduce(
+    (maxIdx, d, i) => (d.meals > (data[maxIdx]?.meals ?? 0) ? i : maxIdx),
+    0
+  );
+  const legendColor = isDark ? "rgba(255,255,255,0.78)" : "#2f4f45";
+  const tooltipStyle = {
+    backgroundColor: isDark ? "rgba(6, 46, 38, 0.92)" : "rgba(255, 255, 255, 0.96)",
+    border: `1px solid ${isDark ? "rgba(255, 255, 255, 0.2)" : "rgba(15, 60, 45, 0.15)"}`,
+    borderRadius: "10px",
+    backdropFilter: "blur(12px)",
+    color: isDark ? "#ffffff" : "#123a2f",
+    fontSize: "12px",
+  } as const;
 
   return (
     <div className="h-64 w-full">
@@ -56,47 +73,46 @@ export function MealChart({ data }: MealChartProps) {
           <Pie
             data={data}
             cx="50%"
-            cy="50%"
-            innerRadius={60}
-            outerRadius={80}
+            cy="45%"
+            innerRadius="42%"
+            outerRadius="62%"
             fill="#8884d8"
             paddingAngle={2}
             dataKey="meals"
             nameKey="name"
-            label={({ name, percent }) => {
-              const p = percent ?? 0;
-              return `${name} ${(p * 100).toFixed(0)}%`;
-            }}
             labelLine={false}
           >
             {data.map((_, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={index === maxIndex ? ORANGE_ACCENT : EMERALD_SHADES[index % EMERALD_SHADES.length]}
+                fill={
+                  index === maxIndex
+                    ? ORANGE_ACCENT
+                    : EMERALD_SHADES[index % EMERALD_SHADES.length]
+                }
               />
             ))}
           </Pie>
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "rgba(255, 255, 255, 0.1)",
-              border: "1px solid rgba(255, 255, 255, 0.2)",
-              borderRadius: "8px",
-              backdropFilter: "blur(12px)",
-              color: "white",
-            }}
-          />
+          <Tooltip contentStyle={tooltipStyle} />
           <Legend
-            layout="vertical"
-            align="right"
-            verticalAlign="middle"
+            layout="horizontal"
+            align="center"
+            verticalAlign="bottom"
             iconType="circle"
-            wrapperStyle={{ paddingRight: 20 }}
+            iconSize={8}
+            wrapperStyle={{
+              color: legendColor,
+              fontSize: 11,
+              lineHeight: "16px",
+              paddingTop: 6,
+            }}
           />
         </PieChart>
       </ResponsiveContainer>
-      <div className="mt-4 text-center text-sm text-white/70">
-        Total meals: <span className="font-medium text-white">{totalMeals}</span>
-      </div>
+      <p className="text-center text-sm app-text-muted">
+        {t(lang, "summary.totalMeal")}:{" "}
+        <span className="font-semibold app-text">{totalMeals}</span>
+      </p>
     </div>
   );
 }

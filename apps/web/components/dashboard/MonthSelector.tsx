@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "cn";
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
@@ -50,6 +50,7 @@ export function MonthSelector() {
   const pathname = usePathname();
   const [month, setMonth] = useState<string>(getCurrentMonthString());
   const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const paramMonth = searchParams.get("month");
@@ -58,8 +59,35 @@ export function MonthSelector() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function onPointerDown(event: MouseEvent | TouchEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isOpen]);
+
   function handleMonthChange(newMonth: string) {
     setMonth(newMonth);
+    setIsOpen(false);
     const params = new URLSearchParams(searchParams.toString());
     params.set("month", newMonth);
     router.push(`${pathname}?${params.toString()}`);
@@ -76,33 +104,47 @@ export function MonthSelector() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <Button
         variant="ghost"
-        className="glass-subtle w-full justify-between gap-2 rounded-xl px-3 py-2 text-sm text-white transition-colors hover:bg-white/10"
+        className="glass-subtle w-full justify-between gap-2 rounded-xl px-3 py-2 text-sm app-text transition-colors hover:app-surface-strong"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="dialog"
+        aria-label={`Select month: ${formatMonth(month)}`}
       >
-        <span className="font-medium">{formatMonth(month)}</span>
-        <ChevronDown className="size-4 text-emerald-300" />
+        <span className="truncate font-medium">{formatMonth(month)}</span>
+        <ChevronDown
+          className={cn(
+            "size-4 shrink-0 app-text-emerald transition-transform",
+            isOpen && "rotate-180"
+          )}
+        />
       </Button>
 
       {isOpen && (
-        <div className="glass-strong absolute top-full left-0 right-0 z-50 mt-2 rounded-2xl border border-white/15 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.25)] backdrop-blur-xl">
-          <div className="mb-2 flex items-center justify-between">
+        <div
+          role="dialog"
+          aria-label="Select month"
+          className="glass-strong absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border app-border p-3 shadow-[0_12px_40px_rgba(0,0,0,0.25)] backdrop-blur-xl"
+        >
+          <div className="mb-2 flex items-center justify-between gap-1">
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-white/10"
+              className="app-text hover:app-surface-strong"
               onClick={goToPrevMonth}
+              aria-label="Previous month"
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="font-medium text-white">{formatMonth(month)}</span>
+            <span className="truncate text-sm font-medium app-text">{formatMonth(month)}</span>
             <Button
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-white/10"
+              className="app-text hover:app-surface-strong"
               onClick={goToNextMonth}
+              aria-label="Next month"
             >
               <ChevronRight className="size-4" />
             </Button>
@@ -118,11 +160,12 @@ export function MonthSelector() {
                   key={optionMonth}
                   variant={isSelected ? "default" : "ghost"}
                   size="sm"
+                  aria-pressed={isSelected}
                   className={cn(
                     "justify-start rounded-lg px-2 py-1 text-xs transition-colors",
                     isSelected
                       ? "bg-emerald-500 text-white hover:bg-emerald-500/90"
-                      : "text-white/80 hover:bg-white/10 hover:text-white"
+                      : "app-text hover:app-surface-strong hover:app-text"
                   )}
                   onClick={() => handleMonthChange(optionMonth)}
                 >

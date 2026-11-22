@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#00834b" />
+    <title>Offline — MassManager</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --emerald: #00834b;
+        --emerald-deep: #006b3d;
+        --orange: #ef852e;
+        --surface: #ffffff;
+        --text: #10251c;
+        --muted: #52665d;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 1.5rem;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: var(--text);
+        background: linear-gradient(150deg, var(--emerald-deep), var(--emerald) 55%, #0a5c48);
+      }
+      .card {
+        width: min(100%, 26rem);
+        padding: 2rem 1.75rem;
+        text-align: center;
+        background: var(--surface);
+        border: 1px solid rgba(0, 131, 75, 0.18);
+        border-radius: 1.5rem;
+        box-shadow: 0 1.5rem 3rem rgba(0, 43, 26, 0.28);
+        animation: rise 320ms ease-out both;
+      }
+      img {
+        width: 4.5rem;
+        height: 4.5rem;
+        object-fit: cover;
+        border-radius: 1rem;
+        border: 3px solid var(--orange);
+      }
+      h1 { margin: 1.25rem 0 0.35rem; font-size: 1.4rem; line-height: 1.25; }
+      .bn { margin: 0 0 0.75rem; font-size: 1rem; color: var(--emerald); font-weight: 600; }
+      p { margin: 0 0 1.5rem; font-size: 0.925rem; line-height: 1.6; color: var(--muted); }
+      button {
+        width: 100%;
+        min-height: 2.75rem;
+        border: 0;
+        border-radius: 0.85rem;
+        background: var(--emerald);
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 160ms ease, transform 160ms ease;
+      }
+      button:hover { background: var(--emerald-deep); }
+      button:active { transform: translateY(1px); }
+      button:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+      @media (prefers-reduced-motion: reduce) {
+        .card { animation: none; }
+        button { transition: none; }
+      }
+      @keyframes rise {
+        from { opacity: 0; transform: translateY(0.75rem); }
+        to { opacity: 1; transform: none; }
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { --surface: #10201a; --text: #eaf6ef; --muted: #a9c1b4; --emerald: #00c483; }
+        .card { border-color: rgba(0, 196, 131, 0.25); }
+        button { color: #062315; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <img src="/logo.png" alt="MassManager" width="72" height="72" />
+      <h1>You&apos;re offline</h1>
+      <p class="bn">ইন্টারনেট সংযোগ নেই</p>
+      <p>
+        Live meal, bazar, advance and settlement data needs a connection.
+        Reconnect and try again — nothing private is stored offline.
+      </p>
+      <button type="button" onclick="location.reload()">Try again</button>
+    </main>
+  </body>
+</html>

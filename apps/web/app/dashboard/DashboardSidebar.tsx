@@ -73,7 +73,7 @@ export function DashboardSidebar() {
   return (
     <aside
       className={cn(
-        "hidden lg:flex lg:static flex-col border-r border-emerald-500/15 bg-gradient-to-b from-green-950 via-green-950 to-emerald-950/90 text-green-50 shadow-[4px_0_24px_rgba(0,0,0,0.25)] backdrop-blur-md transition-all duration-300",
+        "dark hidden shrink-0 flex-col border-r border-emerald-500/15 bg-gradient-to-b from-green-950 via-green-950 to-emerald-950/90 text-green-50 shadow-[4px_0_24px_rgba(0,0,0,0.25)] backdrop-blur-md transition-[width] duration-300 lg:sticky lg:top-0 lg:flex lg:h-dvh",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -95,7 +95,7 @@ export function DashboardSidebar() {
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="rounded-lg p-1.5 text-green-200 transition-colors hover:bg-white/10 hover:text-white"
+          className="rounded-lg p-1.5 text-green-200 transition-colors hover:app-surface-strong hover:app-text"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight className="size-5" /> : <ChevronLeft className="size-5" />}
@@ -104,7 +104,7 @@ export function DashboardSidebar() {
 
       <nav className="flex-1 space-y-4 overflow-y-auto p-3">
         {!collapsed && (
-          <div className="mb-2 rounded-xl border border-white/10 bg-white/5 p-2 backdrop-blur-sm">
+          <div className="mb-2 rounded-xl border app-border app-surface p-2 backdrop-blur-sm">
             <MonthSelector />
           </div>
         )}
@@ -155,23 +155,23 @@ export function DashboardSidebar() {
 
         {!collapsed && (
           <div className="space-y-3">
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm">
+            <div className="rounded-xl border app-border app-surface p-3 backdrop-blur-sm">
               <div className="mb-1 flex items-center justify-between text-xs">
                 <span className="text-green-300">{t(lang, "summary.totalBazar")}</span>
-                <span className="font-medium text-white">৳0</span>
+                <span className="font-medium app-text">৳0</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-green-300">{t(lang, "summary.cashInHand")}</span>
-                <span className="font-medium text-white">৳0</span>
+                <span className="font-medium app-text">৳0</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-2.5 backdrop-blur-sm transition-colors hover:bg-white/10">
+            <div className="flex items-center gap-3 rounded-xl border app-border app-surface p-2.5 backdrop-blur-sm transition-colors hover:app-surface-strong">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
                 <User className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white">{userName}</p>
+                <p className="truncate text-sm font-medium app-text">{userName}</p>
                 <p className="text-xs text-green-400">
                   {isManager ? (
                     <span className="flex items-center gap-1">
@@ -190,13 +190,13 @@ export function DashboardSidebar() {
         {collapsed && (
           <div className="flex flex-col items-center gap-2">
             <button
-              className="rounded-lg p-1.5 text-green-200 transition-colors hover:bg-white/10 hover:text-white"
+              className="rounded-lg p-1.5 text-green-200 transition-colors hover:app-surface-strong hover:app-text"
               title="Mess Manager"
             >
               <Building2 className="size-5" />
             </button>
             <button
-              className="rounded-lg p-1.5 text-green-200 transition-colors hover:bg-white/10 hover:text-white"
+              className="rounded-lg p-1.5 text-green-200 transition-colors hover:app-surface-strong hover:app-text"
               title={userName}
             >
               <User className="size-5" />
@@ -223,7 +223,7 @@ function SidebarSection({ title, items, pathname, collapsed, lang, linkBase }: S
   return (
     <div>
       {!collapsed && (
-        <h3 className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-300/70">
+        <h3 className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] app-text-emerald opacity-70">
           {title}
         </h3>
       )}
@@ -234,11 +234,13 @@ function SidebarSection({ title, items, pathname, collapsed, lang, linkBase }: S
             <li key={item.href}>
               <Link
                 href={item.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   linkBase,
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70",
                   active
-                    ? "bg-emerald-500/15 text-white shadow-[inset_0_0_0_1px_rgba(16,185,129,0.25)]"
-                    : "text-green-200 hover:bg-white/5 hover:text-white",
+                    ? "bg-emerald-500/15 app-text shadow-[inset_0_0_0_1px_rgba(16,185,129,0.25)]"
+                    : "text-green-200 hover:app-surface-strong hover:app-text",
                   collapsed && "justify-center px-2"
                 )}
                 title={collapsed ? t(lang, item.labelKey) : undefined}
@@ -246,7 +248,7 @@ function SidebarSection({ title, items, pathname, collapsed, lang, linkBase }: S
                 {active && (
                   <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.7)]" />
                 )}
-                <span className={cn("transition-transform duration-200", active ? "text-emerald-300" : "text-green-300 group-hover:text-emerald-300")}>
+                <span className={cn("transition-transform duration-200", active ? "app-text-emerald" : "text-green-300 group-hover:app-text-emerald")}>
                   {item.icon}
                 </span>
                 {!collapsed && <span className="truncate">{t(lang, item.labelKey)}</span>}

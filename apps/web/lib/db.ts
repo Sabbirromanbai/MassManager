@@ -19,7 +19,8 @@ export async function getDb(): Promise<Db> {
   const client = globalForMongo.mongoClient ?? new MongoClient(uri);
   globalForMongo.mongoClient = client;
 
-  await client.connect();
+  // The MongoDB driver connects lazily on first operation. Avoid connecting
+  // here so builds do not require database network access at compile time.
   const db = client.db("mess-manager");
   globalForMongo.mongoDb = db;
 

@@ -29,23 +29,23 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "glass-subtle flex flex-col gap-4 rounded-2xl border border-white/15 px-5 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.12)] backdrop-blur-md sm:flex-row sm:items-center sm:justify-between mb-6",
+        "glass-subtle flex flex-col gap-4 rounded-2xl px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5",
         "animate-fade-in-up",
         delayClass
       )}
     >
-      <div className="flex min-w-0 items-center gap-4">
+      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
         {icon && (
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/25 to-emerald-700/15 text-emerald-300 shadow-[0_0_16px_rgba(16,185,129,0.2)]">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl app-icon-emerald sm:size-11">
             {icon}
           </div>
         )}
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-bold tracking-tight text-white">
+          <h1 className="break-words text-xl font-bold tracking-tight app-text sm:text-2xl">
             {t(currentLang, titleKey)}
           </h1>
           {subtitleKey && (
-            <p className="mt-1 text-sm text-white/70">
+            <p className="mt-1 break-words text-sm app-text-muted">
               {t(currentLang, subtitleKey)
                 .replace("{month}", month ?? "")
                 .replace("{managerName}", managerName ?? "")}
@@ -53,7 +53,7 @@ export function PageHeader({
           )}
         </div>
       </div>
-      <div className="hidden lg:flex">
+      <div className="hidden shrink-0 lg:flex">
         <HeaderActions currentLang={currentLang} variant="header" />
       </div>
     </header>

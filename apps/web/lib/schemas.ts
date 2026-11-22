@@ -16,7 +16,7 @@ export const createMealSchema = z.object({
   memberId: z.string().min(1, "Member ID is required"),
   month: monthSchema,
   date: dateSchema,
-  count: z.number().int().min(1).max(2, "Count must be 1 or 2").default(2),
+  count: z.number().int().min(0).max(3, "Count must be 0, 1, 2, or 3").default(2),
 });
 
 export const createEggEntryRequestSchema = z.object({

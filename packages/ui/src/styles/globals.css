@@ -93,6 +93,27 @@
     --emerald-soft: oklch(0.92 0.05 162);
     --orange: oklch(0.72 0.16 55);
     --orange-soft: oklch(0.93 0.06 55);
+
+    /* Theme-aware app surface tokens used by the dashboard shell. */
+    --app-fg: oklch(0.22 0.02 162);
+    --app-fg-muted: oklch(0.42 0.02 162);
+    --app-fg-faint: oklch(0.52 0.02 162);
+    --app-border: oklch(0.45 0.05 162 / 18%);
+    --app-border-strong: oklch(0.45 0.06 162 / 30%);
+    --app-surface: oklch(1 0 0 / 62%);
+    --app-surface-strong: oklch(1 0 0 / 80%);
+    --app-surface-subtle: oklch(1 0 0 / 45%);
+    --app-surface-hover: oklch(0.96 0.025 162 / 80%);
+    --app-inset: oklch(0.2 0.02 162 / 6%);
+    --app-sticky: oklch(0.99 0.006 162 / 96%);
+    --app-accent: oklch(0.47 0.13 162);
+    --app-accent-foreground: oklch(1 0 0);
+    --app-orange: oklch(0.55 0.15 55);
+    --app-amber: oklch(0.55 0.13 75);
+    --app-danger: oklch(0.5 0.19 27);
+    --app-warning: oklch(0.55 0.13 85);
+    --app-shadow: 0 8px 32px rgba(15, 60, 45, 0.08);
+    --app-shadow-strong: 0 12px 40px rgba(15, 60, 45, 0.12);
 }
 
 .dark {
@@ -132,6 +153,27 @@
     --emerald-soft: oklch(0.28 0.06 162);
     --orange: oklch(0.75 0.15 55);
     --orange-soft: oklch(0.3 0.06 55);
+
+    /* Theme-aware app surface tokens used by the dashboard shell. */
+    --app-fg: oklch(0.985 0 0);
+    --app-fg-muted: oklch(1 0 0 / 72%);
+    --app-fg-faint: oklch(1 0 0 / 55%);
+    --app-border: oklch(1 0 0 / 12%);
+    --app-border-strong: oklch(1 0 0 / 20%);
+    --app-surface: oklch(1 0 0 / 6%);
+    --app-surface-strong: oklch(1 0 0 / 12%);
+    --app-surface-subtle: oklch(1 0 0 / 4%);
+    --app-surface-hover: oklch(1 0 0 / 12%);
+    --app-inset: oklch(0 0 0 / 25%);
+    --app-sticky: oklch(0.23 0.02 162 / 94%);
+    --app-accent: oklch(0.78 0.15 162);
+    --app-accent-foreground: oklch(0.16 0.02 162);
+    --app-orange: oklch(0.8 0.14 55);
+    --app-amber: oklch(0.82 0.14 75);
+    --app-danger: oklch(0.72 0.17 27);
+    --app-warning: oklch(0.82 0.16 90);
+    --app-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    --app-shadow-strong: 0 12px 40px rgba(0, 0, 0, 0.18);
 }
 
 @layer base {
@@ -149,38 +191,50 @@
 
 @layer utilities {
   .glass {
-    @apply bg-white/[0.08] backdrop-blur-md border border-white/15 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-xl;
+    background-color: var(--app-surface);
+    border: 1px solid var(--app-border);
+    box-shadow: var(--app-shadow);
+    border-radius: var(--radius-xl);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
   .glass-strong {
-    @apply bg-white/[0.12] backdrop-blur-lg border border-white/20 shadow-[0_12px_40px_rgba(0,0,0,0.18)] rounded-xl;
+    background-color: var(--app-surface-strong);
+    border: 1px solid var(--app-border-strong);
+    box-shadow: var(--app-shadow-strong);
+    border-radius: var(--radius-xl);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
   }
   .glass-subtle {
-    @apply bg-white/[0.05] backdrop-blur-sm border border-white/10 shadow-sm rounded-xl;
+    background-color: var(--app-surface-subtle);
+    border: 1px solid var(--app-border);
+    box-shadow: var(--app-shadow);
+    border-radius: var(--radius-xl);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
   .glass-border {
-    @apply border border-white/20 rounded-xl;
+    @apply rounded-xl;
+    border: 1px solid var(--app-border-strong);
   }
   .glass-shadow {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    box-shadow: var(--app-shadow);
   }
   .glass-shadow-soft {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--app-shadow);
   }
 
   .hover-lift {
     transition: transform 200ms ease, box-shadow 200ms ease;
   }
-  .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
-  }
-
   .hover-glow {
     transition: box-shadow 200ms ease, border-color 200ms ease;
   }
-  .hover-glow:hover {
-    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.35), 0 8px 24px rgba(16, 185, 129, 0.12);
-    border-color: rgba(16, 185, 129, 0.45);
+  .app-button-motion {
+    transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1),
+      background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease,
+      color 180ms ease;
   }
 
   .transition-smooth {
@@ -188,6 +242,132 @@
   }
   .transition-fast {
     transition: all 120ms ease;
+  }
+
+  .app-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    border: 2px solid color-mix(in oklch, currentColor 28%, transparent);
+    border-top-color: currentColor;
+    animation: app-spin 700ms linear infinite;
+  }
+}
+
+@keyframes app-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (hover: hover) {
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--app-shadow-strong);
+  }
+  .hover-glow:hover {
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--emerald) 45%, transparent),
+      0 8px 24px color-mix(in oklch, var(--emerald) 15%, transparent);
+    border-color: color-mix(in oklch, var(--emerald) 45%, transparent);
+  }
+  .app-button-motion:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--app-shadow);
+  }
+}
+
+.app-button-motion:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Theme-aware utility classes (variants such as hover:/focus-visible: work). */
+@utility app-text {
+  color: var(--app-fg);
+}
+@utility app-text-muted {
+  color: var(--app-fg-muted);
+}
+@utility app-text-faint {
+  color: var(--app-fg-faint);
+}
+@utility app-text-emerald {
+  color: var(--app-accent);
+}
+@utility app-text-orange {
+  color: var(--app-orange);
+}
+@utility app-text-amber {
+  color: var(--app-amber);
+}
+@utility app-text-danger {
+  color: var(--app-danger);
+}
+@utility app-text-warning {
+  color: var(--app-warning);
+}
+@utility app-border {
+  border-color: var(--app-border);
+}
+@utility app-border-strong {
+  border-color: var(--app-border-strong);
+}
+@utility app-surface {
+  background-color: var(--app-surface);
+}
+@utility app-surface-strong {
+  background-color: var(--app-surface-strong);
+}
+@utility app-surface-hover {
+  background-color: var(--app-surface-hover);
+}
+@utility app-inset {
+  background-color: var(--app-inset);
+}
+@utility app-sticky {
+  background-color: var(--app-sticky);
+}
+@utility app-tint-emerald {
+  background-color: color-mix(in oklch, var(--emerald) 16%, transparent);
+}
+@utility app-tint-orange {
+  background-color: color-mix(in oklch, var(--orange) 18%, transparent);
+}
+@utility app-tint-amber {
+  background-color: color-mix(in oklch, var(--app-amber) 16%, transparent);
+}
+@utility app-tint-danger {
+  background-color: color-mix(in oklch, var(--app-danger) 16%, transparent);
+}
+@utility app-tint-warning {
+  background-color: color-mix(in oklch, var(--app-warning) 16%, transparent);
+}
+@utility app-icon-emerald {
+  background-color: color-mix(in oklch, var(--emerald) 16%, transparent);
+  color: var(--app-accent);
+}
+@utility app-icon-orange {
+  background-color: color-mix(in oklch, var(--orange) 18%, transparent);
+  color: var(--app-orange);
+}
+@utility app-icon-amber {
+  background-color: color-mix(in oklch, var(--app-amber) 16%, transparent);
+  color: var(--app-amber);
+}
+@utility app-focus {
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--emerald) 65%, transparent);
+  }
+}
+@utility app-primary-button {
+  background-color: var(--app-accent);
+  border-color: var(--app-accent);
+  color: var(--app-accent-foreground);
+  box-shadow: 0 6px 18px color-mix(in oklch, var(--app-accent) 24%, transparent);
+  &:hover {
+    background-color: color-mix(in oklch, var(--app-accent) 88%, black 12%);
+    border-color: color-mix(in oklch, var(--app-accent) 88%, black 12%);
   }
 }
 
@@ -251,7 +431,9 @@
 .delay-5 { animation-delay: 250ms; }
 
 .mobile-nav-bar {
-  @apply fixed bottom-0 left-4 right-4 lg:hidden z-30 mx-4 mb-4 rounded-xl bg-white/10 backdrop-blur-[12px] border border-white/20 shadow-xl;
+  @apply fixed bottom-0 left-1/2 z-40 mb-3 flex -translate-x-1/2 rounded-2xl border border-white/15 bg-green-950/90 shadow-2xl backdrop-blur-xl lg:hidden;
+  width: min(calc(100% - 1.5rem), 30rem);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .mobile-nav-pill {
@@ -268,15 +450,15 @@
 }
 
 .nav-item-btn {
-  @apply relative z-10 flex flex-col items-center justify-center gap-1 py-3 px-2 transition-all duration-200;
+  @apply relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5 px-1 py-2 transition-all duration-200;
 }
 
 .nav-item-btn:active svg {
-  transform: scale(1.2);
+  transform: scale(1.15);
 }
 
 .nav-item-btn:focus-visible {
-  @apply outline-none ring-2 ring-emerald-500 ring-offset-2 ring-offset-white/10;
+  @apply outline-none ring-2 ring-emerald-400/70;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -294,5 +476,23 @@
   .animate-scale-in {
     opacity: 1;
     transform: none;
+  }
+
+  .hover-lift:hover {
+    transform: none;
+  }
+
+  .mobile-nav-pill {
+    transition: none;
+  }
+
+  .app-button-motion,
+  .app-button-motion:hover,
+  .app-button-motion:active {
+    transform: none !important;
+  }
+
+  .nav-item-btn:active svg {
+    transform: none !important;
   }
 }

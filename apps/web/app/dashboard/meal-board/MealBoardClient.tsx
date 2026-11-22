@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "cn";
 import { Button } from "@workspace/ui/components/button";
 import { Lang, t } from "@/lib/lang";
@@ -17,6 +17,13 @@ export interface GuestEntry {
   date: number;
   meals: number;
   ratePerMeal: number;
+}
+
+type MealCount = 0 | 1 | 2 | 3;
+const MEAL_COUNTS: readonly MealCount[] = [0, 1, 2, 3];
+
+function toMealCount(value: number | undefined): MealCount {
+  return value === 0 || value === 1 || value === 2 || value === 3 ? value : 2;
 }
 
 interface MealBoardClientProps {
@@ -38,11 +45,11 @@ interface MealBoardClientProps {
   dhakaTime: Date;
 }
 
-const cardClass = "glass-strong rounded-xl border border-white/10 p-4 md:p-5 transition-all duration-200";
+const cardClass = "glass-strong rounded-xl border app-border p-4 md:p-5 transition-all duration-200";
 const labelClass =
-  "mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/50";
+  "mb-1.5 block text-xs font-medium uppercase tracking-wide app-text-faint";
 const fieldClass =
-  "glass w-full rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors focus:ring-2 focus:ring-emerald-500";
+  "glass w-full min-w-0 rounded-lg px-3 py-2 text-sm app-text outline-none transition-colors focus:border-emerald-500/40 focus:ring-2 focus:ring-emerald-500/60 disabled:cursor-not-allowed disabled:opacity-60";
 const iconWrapBase =
   "flex size-9 shrink-0 items-center justify-center rounded-lg";
 
@@ -85,7 +92,7 @@ export function MealBoardClient({
 
   const [selectedMemberId, setSelectedMemberId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>(String(initialDay));
-  const [mealCount, setMealCount] = useState<1 | 2>(2);
+  const [mealCount, setMealCount] = useState<MealCount>(2);
   const [isAdding, setIsAdding] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
@@ -118,6 +125,13 @@ export function MealBoardClient({
   );
   const eggMember = sortedEggMembers[0];
   const guestMember = sortedGuestMembers[0];
+
+  // Reflect the stored daily count when a member/date is selected so changing
+  // an existing entry starts from its current value (including 0 and 3).
+  useEffect(() => {
+    if (!selectedMemberId) return;
+    setMealCount(toMealCount(mealsMap.get(`${selectedMemberId}-${selectedDate}`)));
+  }, [selectedMemberId, selectedDate, mealsMap]);
 
   const weekdayShort = (day: number): string => {
     const key = getWeekdayKey(day, month);
@@ -422,25 +436,26 @@ export function MealBoardClient({
       {isManager && (
         <section className={cn(cardClass, "animate-fade-in-up delay-1")}>
           <div className="mb-4 flex items-center gap-2.5">
-            <div className={cn(iconWrapBase, "bg-emerald-500/15 text-emerald-400")}>
+            <div className={cn(iconWrapBase, "app-icon-emerald")}>
               <UtensilsCrossed className="size-4" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-white">
+              <h3 className="text-base font-semibold app-text">
                 {t(lang, "pages.mealBoard.addMeal")}
               </h3>
-              <p className="text-xs text-white/50">
+              <p className="text-xs app-text-faint">
                 {t(lang, "pages.mealBoard.mealEntryHint")}
               </p>
             </div>
           </div>
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-            <div className="min-w-[200px] flex-1">
-              <label className={labelClass}>
+            <div className="min-w-0 flex-1 lg:min-w-[200px]">
+              <label htmlFor="meal-member" className={labelClass}>
                 {t(lang, "pages.mealBoard.memberDropdownLabel")}
               </label>
               <select
+                id="meal-member"
                 value={selectedMemberId}
                 onChange={(event) => setSelectedMemberId(event.target.value)}
                 className={fieldClass}
@@ -460,11 +475,12 @@ export function MealBoardClient({
               </select>
             </div>
 
-            <div className="min-w-[170px] flex-1">
-              <label className={labelClass}>
+            <div className="min-w-0 flex-1 lg:min-w-[170px]">
+              <label htmlFor="meal-date" className={labelClass}>
                 {t(lang, "pages.mealBoard.dateLabel")}
               </label>
               <select
+                id="meal-date"
                 value={selectedDate}
                 onChange={(event) => setSelectedDate(event.target.value)}
                 className={fieldClass}
@@ -485,19 +501,19 @@ export function MealBoardClient({
               <div
                 role="group"
                 aria-label={t(lang, "pages.mealBoard.mealsPerEntry")}
-                className="inline-flex rounded-lg border border-white/15 bg-black/20 p-1"
+                className="inline-flex rounded-lg border app-border app-inset p-1"
               >
-                {([1, 2] as const).map((value) => (
+                {MEAL_COUNTS.map((value) => (
                   <button
                     key={value}
                     type="button"
                     aria-pressed={mealCount === value}
                     onClick={() => setMealCount(value)}
                     className={cn(
-                      "min-w-12 rounded-md px-3 py-1.5 text-sm font-semibold transition-all",
+                      "app-button-motion min-w-12 rounded-md px-3 py-1.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70",
                       mealCount === value
-                        ? "bg-emerald-500 text-white shadow-sm"
-                        : "text-white/60 hover:bg-white/10 hover:text-white"
+                        ? "app-primary-button shadow-sm"
+                        : "app-text-muted hover:app-surface-strong hover:app-text"
                     )}
                   >
                     {value}
@@ -508,12 +524,12 @@ export function MealBoardClient({
 
             <div className="flex gap-2">
               <Button
-                className="glass transition-colors hover:bg-white/20"
+                className="app-primary-button flex-1 sm:flex-none"
                 onClick={handleAddMeal}
                 disabled={isAdding}
               >
                 {isAdding ? (
-                  <span className="animate-spin">⟳</span>
+                  <span className="app-spinner" aria-hidden="true" />
                 ) : (
                   <Plus className="size-4" />
                 )}
@@ -523,12 +539,12 @@ export function MealBoardClient({
               </Button>
               <Button
                 variant="destructive"
-                className="glass border-red-600/30 bg-red-600/20 transition-colors hover:bg-red-600/30"
+                className="glass flex-1 border-red-600/30 bg-red-600/20 transition-colors hover:bg-red-600/30 sm:flex-none"
                 onClick={handleRemoveMeal}
                 disabled={isRemoving}
               >
                 {isRemoving ? (
-                  <span className="animate-spin">⟳</span>
+                  <span className="app-spinner" aria-hidden="true" />
                 ) : (
                   <Minus className="size-4" />
                 )}
@@ -540,7 +556,7 @@ export function MealBoardClient({
           </div>
 
           {selectedMemberName && selectedDate && (
-            <p className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+            <p className="mt-3 break-words rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm app-text-emerald">
               {selectedMemberName} · {dateOptionLabel(Number.parseInt(selectedDate, 10))} · {mealCount}{" "}
               {t(lang, "pages.mealBoard.mealsUnit")}
             </p>
@@ -550,7 +566,7 @@ export function MealBoardClient({
             <p
               role="alert"
               aria-live="assertive"
-              className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+              className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm app-text-danger"
             >
               {error}
             </p>
@@ -561,14 +577,14 @@ export function MealBoardClient({
       {isManager && eggMember && (
         <section className={cn(cardClass, "animate-fade-in-up delay-2")}>
           <div className="mb-4 flex items-center gap-2.5">
-            <div className={cn(iconWrapBase, "bg-amber-500/15 text-amber-400")}>
+            <div className={cn(iconWrapBase, "app-icon-amber")}>
               <Egg className="size-4" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-white">
+              <h3 className="text-base font-semibold app-text">
                 {t(lang, "pages.mealBoard.eggEntry")}
               </h3>
-              <p className="text-xs text-white/50">
+              <p className="text-xs app-text-faint">
                 {eggMember.name} ·{" "}
                 {t(lang, "pages.mealBoard.pricePerPiece")} ৳
                 {EGG_PRICE_PER_PIECE}
@@ -577,11 +593,12 @@ export function MealBoardClient({
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="min-w-[170px] flex-1">
-              <label className={labelClass}>
+            <div className="min-w-0 flex-1">
+              <label htmlFor="egg-date" className={labelClass}>
                 {t(lang, "pages.mealBoard.dateLabel")}
               </label>
               <select
+                id="egg-date"
                 value={eggDate}
                 onChange={(event) => setEggDate(event.target.value)}
                 className={fieldClass}
@@ -596,11 +613,13 @@ export function MealBoardClient({
             </div>
 
             <div className="w-full sm:w-32">
-              <label className={labelClass}>
+              <label htmlFor="egg-pieces" className={labelClass}>
                 {t(lang, "pages.mealBoard.piecesLabel")}
               </label>
               <input
+                id="egg-pieces"
                 type="number"
+                inputMode="numeric"
                 min={1}
                 value={eggPieces}
                 onChange={(event) => setEggPieces(event.target.value)}
@@ -610,12 +629,12 @@ export function MealBoardClient({
 
             <div className="flex gap-2">
               <Button
-                className="glass transition-colors hover:bg-white/20"
+                className="app-primary-button"
                 onClick={handleAddEgg}
                 disabled={isAddingEgg}
               >
                 {isAddingEgg ? (
-                  <span className="animate-spin">⟳</span>
+                  <span className="app-spinner" aria-hidden="true" />
                 ) : (
                   <Plus className="size-4" />
                 )}
@@ -630,7 +649,7 @@ export function MealBoardClient({
                 disabled={isRemovingEgg}
               >
                 {isRemovingEgg ? (
-                  <span className="animate-spin">⟳</span>
+                  <span className="app-spinner" aria-hidden="true" />
                 ) : (
                   <Minus className="size-4" />
                 )}
@@ -647,7 +666,7 @@ export function MealBoardClient({
             <p
               role="alert"
               aria-live="assertive"
-              className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+              className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm app-text-danger"
             >
               {eggError}
             </p>
@@ -658,14 +677,14 @@ export function MealBoardClient({
       {isManager && guestMember && (
         <section className={cn(cardClass, "animate-fade-in-up delay-2")}>
           <div className="mb-4 flex items-center gap-2.5">
-            <div className={cn(iconWrapBase, "bg-amber-500/15 text-amber-400")}>
+            <div className={cn(iconWrapBase, "app-icon-amber")}>
               <Users className="size-4" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-white">
+              <h3 className="text-base font-semibold app-text">
                 {t(lang, "pages.mealBoard.guestEntry")}
               </h3>
-              <p className="text-xs text-white/50">
+              <p className="text-xs app-text-faint">
                 {guestMember.name} · ৳{GUEST_RATE_PER_MEAL} /{" "}
                 {t(lang, "pages.mealBoard.mealsUnit")}
               </p>
@@ -673,11 +692,12 @@ export function MealBoardClient({
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="min-w-[170px] flex-1">
-              <label className={labelClass}>
+            <div className="min-w-0 flex-1">
+              <label htmlFor="guest-date" className={labelClass}>
                 {t(lang, "pages.mealBoard.dateLabel")}
               </label>
               <select
+                id="guest-date"
                 value={guestDate}
                 onChange={(event) => setGuestDate(event.target.value)}
                 className={fieldClass}
@@ -692,11 +712,13 @@ export function MealBoardClient({
             </div>
 
             <div className="w-full sm:w-32">
-              <label className={labelClass}>
+              <label htmlFor="guest-meals" className={labelClass}>
                 {t(lang, "pages.mealBoard.guestMealsLabel")}
               </label>
               <input
+                id="guest-meals"
                 type="number"
+                inputMode="numeric"
                 min={1}
                 max={3}
                 value={guestMealCount}
@@ -707,12 +729,12 @@ export function MealBoardClient({
 
             <div className="flex gap-2">
               <Button
-                className="glass transition-colors hover:bg-white/20"
+                className="app-primary-button"
                 onClick={handleAddGuest}
                 disabled={isAddingGuest}
               >
                 {isAddingGuest ? (
-                  <span className="animate-spin">⟳</span>
+                  <span className="app-spinner" aria-hidden="true" />
                 ) : (
                   <Plus className="size-4" />
                 )}
@@ -727,7 +749,7 @@ export function MealBoardClient({
                 disabled={isRemovingGuest}
               >
                 {isRemovingGuest ? (
-                  <span className="animate-spin">⟳</span>
+                  <span className="app-spinner" aria-hidden="true" />
                 ) : (
                   <Minus className="size-4" />
                 )}
@@ -744,7 +766,7 @@ export function MealBoardClient({
             <p
               role="alert"
               aria-live="assertive"
-              className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+              className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm app-text-danger"
             >
               {guestError}
             </p>
@@ -752,15 +774,16 @@ export function MealBoardClient({
         </section>
       )}
 
-      <section className="glass-strong overflow-x-auto rounded-xl border border-white/10 p-4 animate-fade-in-up delay-1">
-        <h3 className="mb-3 text-lg font-semibold text-white">
+      <section className="glass-strong overflow-hidden rounded-xl border app-border p-4 animate-fade-in-up delay-1">
+        <h3 className="mb-3 text-base font-semibold app-text sm:text-lg">
           {t(lang, "pages.mealBoard.registerGrid")}
         </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-max text-sm text-white/90">
+        <div className="overflow-x-auto overscroll-x-contain">
+          <table className="w-full min-w-max text-sm app-text">
+            <caption className="sr-only">{t(lang, "pages.mealBoard.registerGrid")}</caption>
             <thead>
-              <tr className="border-b border-white/20">
-                <th className="sticky left-0 z-10 bg-white/10 backdrop-blur-sm p-2 font-medium text-white/70">
+              <tr className="border-b app-border-strong">
+                <th scope="col" className="sticky left-0 z-10 app-sticky p-2 text-left font-medium app-text-muted backdrop-blur-sm">
                   {t(lang, "pages.mealBoard.memberTotal")}
                 </th>
                 {days.map((day) => {
@@ -768,11 +791,12 @@ export function MealBoardClient({
                   return (
                     <th
                       key={day}
+                      scope="col"
                       className={cn(
                         "p-2 text-center align-bottom font-medium",
                         friday
-                          ? "bg-emerald-500/10 text-emerald-300"
-                          : "text-white/70"
+                          ? "bg-emerald-500/10 app-text-emerald"
+                          : "app-text-muted"
                       )}
                     >
                       <span className="flex flex-col items-center gap-0.5">
@@ -788,7 +812,7 @@ export function MealBoardClient({
                         <span
                           className={cn(
                             "text-[10px] font-normal uppercase tracking-wide",
-                            friday ? "text-emerald-300/80" : "text-white/40"
+                            friday ? "app-text-emerald opacity-80" : "app-text-faint"
                           )}
                         >
                           {weekdayShort(day)}
@@ -797,7 +821,7 @@ export function MealBoardClient({
                     </th>
                   );
                 })}
-                <th className="sticky right-0 z-10 bg-white/10 backdrop-blur-sm p-2 font-medium text-white/70">
+                <th scope="col" className="sticky right-0 z-10 app-sticky p-2 text-right font-medium app-text-muted backdrop-blur-sm">
                   {t(lang, "pages.mealBoard.memberTotal")}
                 </th>
               </tr>
@@ -808,9 +832,9 @@ export function MealBoardClient({
                 return (
                   <tr
                     key={memberId}
-                    className="border-b border-white/10 transition-colors hover:bg-white/5"
+                    className="border-b app-border transition-colors hover:app-surface-strong"
                   >
-                    <td className="sticky left-0 z-10 bg-white/10 backdrop-blur-sm p-2 font-medium">
+                    <td className="sticky left-0 z-10 app-sticky backdrop-blur-sm p-2 font-medium">
                       {member.name}
                     </td>
                     {days.map((day) => {
@@ -824,7 +848,7 @@ export function MealBoardClient({
                       return (
                         <td key={day} className="relative p-2 text-center">
                           {isOff ? (
-                            <span className="text-xs text-yellow-400">
+                            <span className="text-xs app-text-warning">
                               {mealOff?.status === "done" ? "✓" : "○"}
                             </span>
                           ) : (
@@ -832,11 +856,11 @@ export function MealBoardClient({
                               className={cn(
                                 "font-medium",
                                 day === today
-                                  ? "rounded bg-emerald-500/20 px-1.5 py-0.5"
+                                  ? "rounded app-tint-emerald px-1.5 py-0.5"
                                   : "",
                                 count === undefined
-                                  ? "text-white/40"
-                                  : "text-white"
+                                  ? "app-text-faint"
+                                  : "app-text"
                               )}
                             >
                               {count ?? "—"}
@@ -845,7 +869,7 @@ export function MealBoardClient({
                         </td>
                       );
                     })}
-                    <td className="sticky right-0 z-10 bg-white/10 backdrop-blur-sm p-2 text-right font-bold">
+                    <td className="sticky right-0 z-10 app-sticky backdrop-blur-sm p-2 text-right font-bold">
                       {days.reduce(
                         (sum, day) => sum + (mealsMap.get(`${memberId}-${day}`) ?? 0),
                         0
@@ -860,7 +884,7 @@ export function MealBoardClient({
                   <tr className="bg-emerald-500/10">
                     <td
                       colSpan={days.length + 2}
-                      className="p-2 font-semibold text-emerald-400"
+                      className="p-2 font-semibold app-text-emerald"
                     >
                       {t(lang, "pages.mealBoard.eggCount")}
                     </td>
@@ -870,9 +894,9 @@ export function MealBoardClient({
                     return (
                       <tr
                         key={memberId}
-                        className="border-b border-white/10 transition-colors hover:bg-white/5"
+                        className="border-b app-border transition-colors hover:app-surface-strong"
                       >
-                        <td className="sticky left-0 z-10 bg-white/10 backdrop-blur-sm p-2 font-medium">
+                        <td className="sticky left-0 z-10 app-sticky backdrop-blur-sm p-2 font-medium">
                           {member.name}
                         </td>
                         {days.map((day) => {
@@ -883,11 +907,11 @@ export function MealBoardClient({
                                 className={cn(
                                   "font-medium",
                                   day === today
-                                    ? "rounded bg-emerald-500/20 px-1.5 py-0.5"
+                                    ? "rounded app-tint-emerald px-1.5 py-0.5"
                                     : "",
                                   pieces === undefined
-                                    ? "text-white/40"
-                                    : "text-emerald-400"
+                                    ? "app-text-faint"
+                                    : "app-text-emerald"
                                 )}
                               >
                                 {pieces ?? "—"}
@@ -895,7 +919,7 @@ export function MealBoardClient({
                             </td>
                           );
                         })}
-                        <td className="sticky right-0 z-10 bg-white/10 backdrop-blur-sm p-2 text-right font-bold text-emerald-400">
+                        <td className="sticky right-0 z-10 app-sticky backdrop-blur-sm p-2 text-right font-bold app-text-emerald">
                           {days.reduce(
                             (sum, day) => sum + (eggMap.get(`${memberId}-${day}`) ?? 0),
                             0
@@ -907,8 +931,8 @@ export function MealBoardClient({
                 </>
               ) : null}
 
-              <tr className="bg-white/10 font-bold">
-                <td className="sticky left-0 z-10 bg-white/10 backdrop-blur-sm p-2">
+              <tr className="app-surface-strong font-bold">
+                <td className="sticky left-0 z-10 app-sticky backdrop-blur-sm p-2">
                   {t(lang, "pages.mealBoard.dailyTotal")}
                 </td>
                 {days.map((day) => (
@@ -922,7 +946,7 @@ export function MealBoardClient({
                     )}
                   </td>
                 ))}
-                <td className="sticky right-0 z-10 bg-white/10 backdrop-blur-sm p-2 text-right">
+                <td className="sticky right-0 z-10 app-sticky backdrop-blur-sm p-2 text-right">
                   {days.reduce(
                     (sum, day) =>
                       sum +
@@ -946,19 +970,19 @@ export function MealBoardClient({
       {guestMember && (
         <section className={cn(cardClass, "animate-fade-in-up delay-2")}>
           <div className="mb-4 flex items-center gap-2.5">
-            <div className={cn(iconWrapBase, "bg-amber-500/15 text-amber-400")}>
+            <div className={cn(iconWrapBase, "app-icon-amber")}>
               <Users className="size-4" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-white">
+              <h3 className="text-base font-semibold app-text">
                 {t(lang, "pages.mealBoard.guestSection")}
               </h3>
-              <p className="text-xs text-white/50">{guestMember.name}</p>
+              <p className="text-xs app-text-faint">{guestMember.name}</p>
             </div>
           </div>
 
           {guestEntries.length === 0 ? (
-            <p className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/50">
+            <p className="rounded-lg border app-border app-surface px-3 py-2 text-sm app-text-faint">
               {t(lang, "pages.mealBoard.guestNoEntries")}
             </p>
           ) : (
@@ -967,26 +991,26 @@ export function MealBoardClient({
                 {guestEntries.map((entry) => (
                   <div
                     key={entry.date}
-                    className="glass flex items-center justify-between rounded-lg p-3 transition-colors hover:bg-white/15"
+                    className="glass flex flex-col gap-2 rounded-lg p-3 transition-colors hover:app-surface-strong sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex size-8 items-center justify-center rounded-full bg-amber-500/20 text-sm font-medium text-amber-300">
+                      <div className="flex size-8 items-center justify-center rounded-full app-tint-amber text-sm font-medium app-text-amber">
                         {guestMember.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-medium text-white">
+                        <p className="font-medium app-text">
                           {dateOptionLabel(entry.date)}
                         </p>
-                        <p className="text-xs text-white/60">
+                        <p className="text-xs app-text-muted">
                           {entry.meals} {t(lang, "pages.mealBoard.mealsUnit")}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-amber-300">
+                      <p className="font-semibold app-text-amber">
                         ৳{entry.meals * entry.ratePerMeal}
                       </p>
-                      <p className="text-xs text-white/50">
+                      <p className="text-xs app-text-faint">
                         {entry.meals} × ৳{entry.ratePerMeal}
                       </p>
                     </div>
@@ -995,10 +1019,10 @@ export function MealBoardClient({
               </div>
 
               <div className="mt-3 flex items-center justify-between rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-sm">
-                <span className="text-white/70">
+                <span className="app-text-muted">
                   {t(lang, "pages.mealBoard.guestTotal")}
                 </span>
-                <span className="font-semibold text-amber-300">
+                <span className="font-semibold app-text-amber">
                   {guestTotalMeals} {t(lang, "pages.mealBoard.mealsUnit")} · ৳
                   {guestTotalAmount}
                 </span>
@@ -1010,7 +1034,7 @@ export function MealBoardClient({
 
       {mealOffMap.size > 0 && isManager && (
         <section className={cn(cardClass, "animate-fade-in-up delay-3")}>
-          <h3 className="mb-3 text-lg font-semibold text-white">
+          <h3 className="mb-3 text-base font-semibold app-text sm:text-lg">
             {t(lang, "pages.mealBoard.mealOffRequestsList")}
           </h3>
           <div className="space-y-2">
@@ -1022,19 +1046,19 @@ export function MealBoardClient({
               return (
                 <div
                   key={key}
-                  className="glass flex items-center justify-between rounded-lg p-3 transition-colors hover:bg-white/15"
+                  className="glass flex flex-col gap-2 rounded-lg p-3 transition-colors hover:app-surface-strong sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex size-8 items-center justify-center rounded-full bg-emerald-500/20">
-                      <span className="text-sm font-medium text-emerald-400">
+                    <div className="flex size-8 items-center justify-center rounded-full app-tint-emerald">
+                      <span className="text-sm font-medium app-text-emerald">
                         {member?.name?.charAt(0) ?? "?"}
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-white">
+                      <p className="font-medium app-text">
                         {member?.name ?? "Unknown"}
                       </p>
-                      <p className="text-xs text-white/60">
+                      <p className="text-xs app-text-muted">
                         {t(lang, "pages.mealBoard.date")} {dateStr}
                       </p>
                     </div>
@@ -1044,8 +1068,8 @@ export function MealBoardClient({
                       className={cn(
                         "rounded px-2 py-1 text-xs font-medium",
                         value.status === "pending"
-                          ? "bg-yellow-500/20 text-yellow-400"
-                          : "bg-emerald-500/20 text-emerald-400"
+                          ? "app-tint-warning app-text-warning"
+                          : "app-icon-emerald"
                       )}
                     >
                       {t(lang, `pages.mealBoard.${value.status}`)}
@@ -1077,18 +1101,18 @@ export function MealBoardClient({
 
       {!isManager && (
         <section className={cn(cardClass, "animate-fade-in-up delay-2")}>
-          <h3 className="mb-3 text-lg font-semibold text-white">
+          <h3 className="mb-3 text-base font-semibold app-text sm:text-lg">
             {t(lang, "pages.mealBoard.mealOffRequest")}
           </h3>
           {currentUserMealOff ? (
             <div className="glass flex items-center justify-between rounded-lg p-3">
               <div className="flex items-center gap-3">
-                <Clock className="size-5 text-yellow-400" />
+                <Clock className="size-5 app-text-warning" />
                 <div>
-                  <p className="font-medium text-white">
+                  <p className="font-medium app-text">
                     {t(lang, "pages.mealBoard.mealOffRequested")}
                   </p>
-                  <p className="text-xs text-white/60">
+                  <p className="text-xs app-text-muted">
                     {currentUserMealOff.status === "done"
                       ? t(lang, "pages.mealBoard.done")
                       : t(lang, "pages.mealBoard.pending")}
@@ -1099,8 +1123,8 @@ export function MealBoardClient({
                 className={cn(
                   "rounded px-2 py-1 text-xs font-medium",
                   currentUserMealOff.status === "pending"
-                    ? "bg-yellow-500/20 text-yellow-400"
-                    : "bg-emerald-500/20 text-emerald-400"
+                    ? "app-tint-warning app-text-warning"
+                    : "app-icon-emerald"
                 )}
               >
                 {t(lang, `pages.mealBoard.${currentUserMealOff.status}`)}
@@ -1108,7 +1132,7 @@ export function MealBoardClient({
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-white/70">
+              <p className="app-text-muted">
                 {t(lang, "pages.mealBoard.mealOffButton")}
               </p>
               <Button
@@ -1117,13 +1141,13 @@ export function MealBoardClient({
                 disabled={requestingMealOff || !canRequestMealOff}
               >
                 {requestingMealOff ? (
-                  <span className="animate-spin">⟳</span>
+                  <span className="app-spinner" aria-hidden="true" />
                 ) : (
                   t(lang, "pages.mealBoard.mealOffButton")
                 )}
               </Button>
               {!canRequestMealOff && (
-                <p className="text-sm text-red-400">
+                <p className="text-sm app-text-danger">
                   {t(lang, "pages.mealBoard.mealOffTimeOver")}
                 </p>
               )}

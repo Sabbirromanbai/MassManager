@@ -13,13 +13,13 @@ interface LanguageToggleProps {
 
 export function LanguageToggle({ currentLang, className }: LanguageToggleProps) {
   const router = useRouter();
+  const nextLang: Lang = currentLang === "bn" ? "en" : "bn";
 
   async function handleToggle() {
-    const newLang: Lang = currentLang === "bn" ? "en" : "bn";
     await fetch("/api/lang", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lang: newLang }),
+      body: JSON.stringify({ lang: nextLang }),
     });
     router.refresh();
   }
@@ -27,16 +27,19 @@ export function LanguageToggle({ currentLang, className }: LanguageToggleProps) 
   return (
     <Button
       variant="ghost"
-      size="icon"
+      size="sm"
       className={cn(
-        "rounded-full border border-white/20 bg-white/10 px-3 text-white backdrop-blur-md transition-all hover:bg-white/20 hover:border-white/30",
+        "h-9 gap-1.5 rounded-full px-2.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70",
         className
       )}
       onClick={handleToggle}
-      aria-label="Toggle language"
+      aria-label={
+        nextLang === "en" ? "Switch language to English" : "ভাষা বাংলায় পরিবর্তন করুন"
+      }
+      title={nextLang === "en" ? "English" : "বাংলা"}
     >
       <Globe className="size-4" />
-      <span className="ml-1.5 text-xs font-semibold uppercase tracking-wide">
+      <span className="text-xs font-semibold uppercase tracking-wide">
         {currentLang === "bn" ? "BN" : "EN"}
       </span>
     </Button>

@@ -10,7 +10,7 @@ import { t } from "@/lib/lang";
 type Lang = "bn" | "en";
 
 const fieldClass =
-  "glass w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none transition-colors focus:ring-2 focus:ring-emerald-500 placeholder:text-white/40";
+  "glass w-full min-w-0 rounded-xl px-3 py-2.5 text-sm app-text outline-none transition-colors focus:border-emerald-500/40 focus:ring-2 focus:ring-emerald-500/60 disabled:cursor-not-allowed disabled:opacity-60 placeholder:app-text-faint";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -56,7 +56,7 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4 py-10">
+    <div className="dark relative flex min-h-dvh items-center justify-center overflow-x-hidden bg-green-950 px-4 py-10">
       <div className="absolute inset-0 z-0">
         <img
           src="/background.jpg"
@@ -77,7 +77,7 @@ export default function SignUpPage() {
               <p className="truncate text-lg font-bold bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">
                 Mess Manager
               </p>
-              <p className="text-xs text-white/60">
+              <p className="text-xs app-text-muted">
                 {t(lang, "pages.signUp.title")}
               </p>
             </div>
@@ -85,15 +85,16 @@ export default function SignUpPage() {
           <HeaderActions currentLang={lang} showSignOut={false} />
         </header>
 
-        <div className="glass-strong rounded-2xl border border-white/15 p-6 shadow-[0_12px_40px_rgba(0,0,0,0.25)] backdrop-blur-xl md:p-8">
-          <h1 className="mb-6 text-center text-2xl font-bold tracking-tight text-white">
+        <div className="glass-strong rounded-2xl border app-border p-6 shadow-[0_12px_40px_rgba(0,0,0,0.25)] backdrop-blur-xl md:p-8">
+          <h1 className="mb-6 text-center text-2xl font-bold tracking-tight app-text">
             {t(lang, "pages.signUp.title")}
           </h1>
 
           {error && (
             <div
+              id="form-error"
               role="alert"
-              className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-300"
+              className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-sm app-text-danger"
             >
               {error}
             </div>
@@ -103,16 +104,19 @@ export default function SignUpPage() {
             <div>
               <label
                 htmlFor="name"
-                className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/60"
+                className="mb-1.5 block text-xs font-medium uppercase tracking-wide app-text-muted"
               >
                 {t(lang, "auth.name")}
               </label>
               <input
                 id="name"
                 type="text"
+                autoComplete="name"
                 value={name}
                 onChange={(event) => setName((event.target as HTMLInputElement).value)}
                 required
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? "form-error" : undefined}
                 placeholder={t(lang, "auth.name")}
                 className={fieldClass}
                 disabled={loading}
@@ -122,16 +126,20 @@ export default function SignUpPage() {
             <div>
               <label
                 htmlFor="email"
-                className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/60"
+                className="mb-1.5 block text-xs font-medium uppercase tracking-wide app-text-muted"
               >
                 {t(lang, "auth.email")}
               </label>
               <input
                 id="email"
                 type="email"
+                autoComplete="email"
+                inputMode="email"
                 value={email}
                 onChange={(event) => setEmail((event.target as HTMLInputElement).value)}
                 required
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? "form-error" : undefined}
                 placeholder={t(lang, "auth.email")}
                 className={fieldClass}
                 disabled={loading}
@@ -141,17 +149,20 @@ export default function SignUpPage() {
             <div>
               <label
                 htmlFor="password"
-                className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/60"
+                className="mb-1.5 block text-xs font-medium uppercase tracking-wide app-text-muted"
               >
                 {t(lang, "auth.password")}
               </label>
               <input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(event) => setPassword((event.target as HTMLInputElement).value)}
                 required
                 minLength={8}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? "form-error" : undefined}
                 placeholder="••••••••"
                 className={fieldClass}
                 disabled={loading}
@@ -174,11 +185,11 @@ export default function SignUpPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-white/70">
+          <p className="mt-6 text-center text-sm app-text-muted">
             {t(lang, "pages.signUp.hasAccount")}
             <a
               href="/sign-in"
-              className="font-medium text-emerald-400 transition-colors hover:text-emerald-300 hover:underline"
+              className="font-medium app-text-emerald underline-offset-2 transition-opacity hover:underline hover:opacity-80"
             >
               {t(lang, "pages.signUp.signInLink")}
             </a>

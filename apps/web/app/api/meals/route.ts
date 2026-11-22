@@ -55,26 +55,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only regular members can have meals added" }, { status: 400 });
     }
 
-    const existingMeal = await meals.findOne({
-      memberId: new ObjectId(memberId),
-      month,
-      date,
-    });
+    // Setting a daily count (including 0) updates an existing entry in place so
+    // monthly totals and meal rates are recalculated from the stored count.
+    const result = await meals.updateOne(
+      {
+        memberId: new ObjectId(memberId),
+        month,
+        date,
+      },
+      {
+        $set: { count },
+        $setOnInsert: {
+          createdBy: sessionMember.member._id ?? new ObjectId(),
+          createdAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
 
-    if (existingMeal) {
-      return NextResponse.json({ error: "This member already has a meal entry for this date" }, { status: 409 });
-    }
-
-    const result = await meals.insertOne({
-      memberId: new ObjectId(memberId),
-      month,
-      date,
-      count,
-      createdBy: sessionMember.member._id ?? new ObjectId(),
-      createdAt: new Date(),
-    });
-
-    return NextResponse.json({ success: true, id: result.insertedId.toString() });
+    return NextResponse.json({ success: true, updated: result.matchedCount > 0 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message || "Invalid request" }, { status: 400 });
