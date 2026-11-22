@@ -52,3 +52,11 @@ export function isManagerName(name: string): boolean {
   const managerName = getManagerNameForMonth(currentMonth);
   return name === managerName;
 }
+
+export function getManagerRotationIndex(month: string): number {
+  const index = monthToIndex(month);
+  if (index < 0) {
+    return 0;
+  }
+  return Math.floor(index / MONTHS_PER_MANAGER) % ROTATION.length;
+}

@@ -15,10 +15,12 @@ export type MemberType = "regular" | "eggOnly" | "guest";
 
 export interface Member {
   _id?: ObjectId;
-  userId?: string;
+  userId?: string | null;
+  email?: string | null;
   name: string;
   type: MemberType;
   isActive: boolean;
+  rotationOrder: number | null;
   createdAt: Date;
 }
 
