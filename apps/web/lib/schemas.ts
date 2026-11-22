@@ -46,10 +46,16 @@ export const deleteGuestMealRequestSchema = z.object({
 export const createBazarEntrySchema = z.object({
   month: monthSchema,
   date: dateSchema,
-  day: z.string().min(1, "Day is required"),
   description: z.string().min(1, "Description is required"),
   amount: positiveNumberSchema,
-  createdBy: z.string().min(1, "Created by is required"),
+});
+
+export const updateBazarEntrySchema = z.object({
+  id: z.string().min(1, "Entry ID is required"),
+  month: monthSchema.optional(),
+  date: dateSchema.optional(),
+  description: z.string().min(1, "Description is required").optional(),
+  amount: positiveNumberSchema.optional(),
 });
 
 export const createAdvanceSchema = z.object({

@@ -19,26 +19,28 @@ interface MealChartProps {
   data: MealData[];
 }
 
-const GREEN_SHADES = [
-  "#16a34a",
-  "#22c55e",
-  "#4ade80",
-  "#86efac",
-  "#bbf7d0",
-  "#dcfce7",
-  "#f0fdf4",
-  "#14532d",
+const EMERALD_SHADES = [
+  "#059669",
+  "#10b981",
+  "#34d399",
+  "#6ee7b7",
+  "#a7f3d0",
+  "#d1fae5",
+  "#047857",
+  "#065f46",
 ];
 
-const RED_ACCENT = "#dc2626";
+const ORANGE_ACCENT = "#f97316";
 
 export function MealChart({ data }: MealChartProps) {
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 w-full">
-        <div className="text-center text-white/70">
-          <p className="font-medium">No data yet</p>
-          <p className="text-sm">Meal entries will appear here</p>
+      <div className="flex h-64 w-full items-center justify-center">
+        <div className="text-center">
+          <p className="font-medium text-white/80">No data yet</p>
+          <p className="mt-1 text-sm text-white/50">
+            Meal entries will appear here
+          </p>
         </div>
       </div>
     );
@@ -70,7 +72,7 @@ export function MealChart({ data }: MealChartProps) {
             {data.map((_, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={index === maxIndex ? RED_ACCENT : GREEN_SHADES[index % GREEN_SHADES.length]}
+                fill={index === maxIndex ? ORANGE_ACCENT : EMERALD_SHADES[index % EMERALD_SHADES.length]}
               />
             ))}
           </Pie>

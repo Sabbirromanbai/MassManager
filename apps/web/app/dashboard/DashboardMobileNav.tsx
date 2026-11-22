@@ -112,14 +112,17 @@ export function DashboardMobileNav() {
     }
   }, []);
 
+  const linkBase =
+    "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200";
+
   return (
     <>
       {/* Sticky Mobile Top Bar */}
-      <header className="lg:hidden sticky top-0 z-30 h-16 bg-white/50 dark:bg-black/50 backdrop-blur-sm border-b border-border flex items-center gap-2 px-3">
+      <header className="lg:hidden sticky top-0 z-30 h-16 border-b border-emerald-500/20 bg-green-950/85 backdrop-blur-md flex items-center gap-2 px-3">
         {/* Left zone: Hamburger */}
         <button
           onClick={() => setSidebarOpen(true)}
-          className="flex-none p-2 rounded-lg hover:bg-muted transition-colors text-foreground"
+          className="flex-none rounded-lg p-2 text-green-100 transition-colors hover:bg-white/10"
           aria-label="Open menu"
         >
           <Menu className="size-6" />
@@ -127,8 +130,12 @@ export function DashboardMobileNav() {
 
         {/* Middle zone: Logo + Title */}
         <div className="flex-1 min-w-0 flex items-center gap-2">
-          <img src="/logo.png" alt="Mess Manager" className="size-8 rounded flex-none" />
-          <span className="font-bold text-lg text-foreground truncate">Mess Manager</span>
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
+            <img src="/logo.png" alt="Mess Manager" className="size-6 rounded-md" />
+          </div>
+          <span className="truncate text-lg font-bold bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">
+            Mess Manager
+          </span>
         </div>
 
         {/* Right zone: Theme + Language + Sign Out */}
@@ -141,55 +148,61 @@ export function DashboardMobileNav() {
       {sidebarOpen && createPortal(
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
             aria-hidden="true"
           />
-          <aside className="absolute inset-y-0 left-0 w-80 bg-green-950 text-green-50 border-r border-green-800 flex flex-col">
-            <div className="flex h-16 items-center justify-between px-4 border-b border-green-800">
-              <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="Mess Manager" className="size-8 rounded" />
-                <span className="font-bold text-lg">Mess Manager</span>
+          <aside className="absolute inset-y-0 left-0 flex w-80 flex-col border-r border-emerald-500/20 bg-gradient-to-b from-green-950/95 to-emerald-950/95 shadow-[4px_0_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+            <div className="flex h-16 items-center justify-between border-b border-emerald-500/20 px-4">
+              <div className="flex items-center gap-2.5">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-[0_0_16px_rgba(16,185,129,0.35)]">
+                  <img src="/logo.png" alt="Mess Manager" className="size-7 rounded-lg" />
+                </div>
+                <span className="text-lg font-bold bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">
+                  Mess Manager
+                </span>
               </div>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="p-2 rounded-lg hover:bg-green-800 transition-colors"
+                className="rounded-lg p-2 text-green-100 transition-colors hover:bg-white/10"
                 aria-label="Close menu"
               >
                 <X className="size-6" />
               </button>
             </div>
-            <nav className="flex-1 overflow-y-auto p-3 space-y-4">
-              <MonthSelector />
-              <MobileNavSection title={nav.sectionTitles.overview} items={nav.overview} pathname={pathname} onClose={() => setSidebarOpen(false)} lang={lang} />
-              <MobileNavSection title={nav.sectionTitles.dailyWork} items={nav.dailyWork} pathname={pathname} onClose={() => setSidebarOpen(false)} lang={lang} />
+            <nav className="flex-1 space-y-4 overflow-y-auto p-3">
+              <div className="mb-2 rounded-xl border border-white/10 bg-white/5 p-2 backdrop-blur-sm">
+                <MonthSelector />
+              </div>
+              <MobileNavSection title={nav.sectionTitles.overview} items={nav.overview} pathname={pathname} onClose={() => setSidebarOpen(false)} lang={lang} linkBase={linkBase} />
+              <MobileNavSection title={nav.sectionTitles.dailyWork} items={nav.dailyWork} pathname={pathname} onClose={() => setSidebarOpen(false)} lang={lang} linkBase={linkBase} />
               {filteredMoney.length > 0 && (
-                <MobileNavSection title={nav.sectionTitles.money} items={filteredMoney} pathname={pathname} onClose={() => setSidebarOpen(false)} lang={lang} />
+                <MobileNavSection title={nav.sectionTitles.money} items={filteredMoney} pathname={pathname} onClose={() => setSidebarOpen(false)} lang={lang} linkBase={linkBase} />
               )}
-              <MobileNavSection title={nav.sectionTitles.people} items={nav.people} pathname={pathname} onClose={() => setSidebarOpen(false)} lang={lang} />
+              <MobileNavSection title={nav.sectionTitles.people} items={nav.people} pathname={pathname} onClose={() => setSidebarOpen(false)} lang={lang} linkBase={linkBase} />
             </nav>
-            <div className="px-3 py-2 border-t border-green-800">
+            <div className="border-t border-emerald-500/20 px-3 py-3">
               <div className="flex justify-center py-1.5">
                 <HeaderActions currentLang={lang} variant="sidebar" showSignOut={true} orientation="horizontal" />
               </div>
-              <div className="space-y-2 mb-3">
-                <div className="bg-green-900/50 border border-green-800 rounded-lg p-2">
-                  <div className="flex items-center justify-between text-xs mb-0.5">
+              <div className="mb-3 space-y-2">
+                <div className="rounded-lg border border-white/10 bg-white/5 p-2 backdrop-blur-sm">
+                  <div className="mb-0.5 flex items-center justify-between text-xs">
                     <span className="text-green-300">{t(lang, "summary.totalBazar")}</span>
-                    <span className="font-medium">৳0</span>
+                    <span className="font-medium text-white">৳0</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-green-300">{t(lang, "summary.cashInHand")}</span>
-                    <span className="font-medium">৳0</span>
+                    <span className="font-medium text-white">৳0</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="size-7 rounded-full bg-green-700 flex items-center justify-center">
+                <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 p-2 backdrop-blur-sm transition-colors hover:bg-white/10">
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
                     <User className="size-3.5" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{userName}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-white">{userName}</p>
                     <p className="text-xs text-green-400">
                       {isManager ? (
                         <span className="flex items-center gap-1">
@@ -210,7 +223,7 @@ export function DashboardMobileNav() {
       )}
 
       {/* Bottom Navigation Bar - Glassmorphism with Animated Pill */}
-      <nav className="lg:hidden mobile-nav-bar" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <nav className="mobile-nav-bar !bg-green-950/90 !border-emerald-500/20 !backdrop-blur-md" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="relative flex items-center" style={{ height: "64px" }}>
           {/* Animated Active Pill */}
           <div
@@ -224,6 +237,7 @@ export function DashboardMobileNav() {
               <Link
                 key={item.href}
                 href={item.href}
+                className="group"
                 onClick={() => {
                   setSidebarOpen(false);
                   setBottomNavIndex(index);
@@ -232,13 +246,13 @@ export function DashboardMobileNav() {
                 <button
                   ref={(el) => { itemRefs.current[index] = el; }}
                   className={cn(
-                    "nav-item-btn flex flex-col items-center justify-center gap-1 py-2 px-3",
-                    index === currentIndex ? "text-emerald-500" : "text-white/70"
+                    "nav-item-btn flex flex-col items-center justify-center gap-1 py-2 px-3 transition-all duration-200",
+                    index === currentIndex ? "text-emerald-400" : "text-green-200/70 hover:text-white"
                   )}
                   aria-current={index === currentIndex ? "page" : undefined}
                   aria-label={t(lang, item.labelKey)}
                 >
-                  <span className="transition-transform duration-200">{item.icon}</span>
+                  <span className="transition-transform duration-200 group-hover:scale-110">{item.icon}</span>
                   <span className="text-xs font-medium transition-colors">{t(lang, item.labelKey)}</span>
                 </button>
               </Link>
@@ -256,32 +270,42 @@ interface MobileNavSectionProps {
   pathname: string;
   onClose: () => void;
   lang: "bn" | "en";
+  linkBase: string;
 }
 
-function MobileNavSection({ title, items, pathname, onClose, lang }: MobileNavSectionProps) {
+function MobileNavSection({ title, items, pathname, onClose, lang, linkBase }: MobileNavSectionProps) {
+  if (items.length === 0) return null;
   return (
     <div>
-      <h3 className="px-3 py-1 text-xs font-semibold text-green-400 uppercase tracking-wider">
+      <h3 className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-300/70">
         {title}
       </h3>
       <ul className="space-y-1">
-        {items.map((item) => (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              onClick={onClose}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
-                pathname === item.href
-                  ? "bg-green-800 text-white"
-                  : "hover:bg-green-800 text-green-200"
-              )}
-            >
-              <span>{item.icon}</span>
-              <span>{t(lang, item.labelKey)}</span>
-            </Link>
-          </li>
-        ))}
+        {items.map((item) => {
+          const active = pathname === item.href;
+          return (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                onClick={onClose}
+                className={cn(
+                  linkBase,
+                  active
+                    ? "bg-emerald-500/15 text-white shadow-[inset_0_0_0_1px_rgba(16,185,129,0.25)]"
+                    : "text-green-200 hover:bg-white/5 hover:text-white"
+                )}
+              >
+                {active && (
+                  <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.7)]" />
+                )}
+                <span className={cn("transition-transform duration-200", active ? "text-emerald-300" : "text-green-300")}>
+                  {item.icon}
+                </span>
+                <span className="truncate">{t(lang, item.labelKey)}</span>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

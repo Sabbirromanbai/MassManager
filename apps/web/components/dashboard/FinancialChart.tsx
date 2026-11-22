@@ -25,10 +25,12 @@ export function FinancialChart({ data }: FinancialChartProps) {
 
   if (!hasData) {
     return (
-      <div className="flex items-center justify-center h-64 w-full">
-        <div className="text-center text-white/70">
-          <p className="font-medium">No data yet</p>
-          <p className="text-sm">Bazar entries will appear here</p>
+      <div className="flex h-64 w-full items-center justify-center">
+        <div className="text-center">
+          <p className="font-medium text-white/80">No data yet</p>
+          <p className="mt-1 text-sm text-white/50">
+            Bazar entries will appear here
+          </p>
         </div>
       </div>
     );
@@ -66,10 +68,10 @@ export function FinancialChart({ data }: FinancialChartProps) {
           <Line
             type="monotone"
             dataKey="amount"
-            stroke="#16a34a"
-            strokeWidth={2}
-            dot={{ fill: "#16a34a", strokeWidth: 2, r: 4 }}
-            activeDot={{ r: 6 }}
+            stroke="#10b981"
+            strokeWidth={2.5}
+            dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }}
+            activeDot={{ r: 6, fill: "#f97316" }}
           />
         </LineChart>
       </ResponsiveContainer>

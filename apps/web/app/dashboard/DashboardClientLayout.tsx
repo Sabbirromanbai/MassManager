@@ -47,9 +47,10 @@ export function DashboardClientLayout({
                 backgroundRepeat: "no-repeat",
               }}
             >
-              <div className="absolute inset-0 bg-black/75" />
+              <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/70 to-emerald-950/60 backdrop-blur-[2px]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.08),transparent_60%)]" />
             </div>
-            {children}
+            <div className="relative z-10">{children}</div>
           </main>
         </div>
       </div>

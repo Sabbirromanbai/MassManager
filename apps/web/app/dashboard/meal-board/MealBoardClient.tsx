@@ -38,7 +38,7 @@ interface MealBoardClientProps {
   dhakaTime: Date;
 }
 
-const cardClass = "glass-strong rounded-xl border border-white/10 p-4 md:p-5";
+const cardClass = "glass-strong rounded-xl border border-white/10 p-4 md:p-5 transition-all duration-200";
 const labelClass =
   "mb-1.5 block text-xs font-medium uppercase tracking-wide text-white/50";
 const fieldClass =
@@ -107,6 +107,9 @@ export function MealBoardClient({
   const sortedRegularMembers = [...regularMembers].sort((a, b) =>
     a.name.localeCompare(b.name)
   );
+  const selectedMemberName = sortedRegularMembers.find(
+    (member) => member._id?.toString() === selectedMemberId
+  )?.name;
   const sortedEggMembers = [...eggOnlyMembers].sort((a, b) =>
     a.name.localeCompare(b.name)
   );
@@ -441,6 +444,7 @@ export function MealBoardClient({
                 value={selectedMemberId}
                 onChange={(event) => setSelectedMemberId(event.target.value)}
                 className={fieldClass}
+                disabled={isAdding || isRemoving}
               >
                 <option value="" disabled>
                   {t(lang, "pages.mealBoard.memberDropdownLabel")}
@@ -464,6 +468,7 @@ export function MealBoardClient({
                 value={selectedDate}
                 onChange={(event) => setSelectedDate(event.target.value)}
                 className={fieldClass}
+                disabled={isAdding || isRemoving}
               >
                 {days.map((day) => (
                   <option key={day} value={String(day)}>
@@ -534,6 +539,13 @@ export function MealBoardClient({
             </div>
           </div>
 
+          {selectedMemberName && selectedDate && (
+            <p className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+              {selectedMemberName} · {dateOptionLabel(Number.parseInt(selectedDate, 10))} · {mealCount}{" "}
+              {t(lang, "pages.mealBoard.mealsUnit")}
+            </p>
+          )}
+
           {error && (
             <p
               role="alert"
@@ -573,6 +585,7 @@ export function MealBoardClient({
                 value={eggDate}
                 onChange={(event) => setEggDate(event.target.value)}
                 className={fieldClass}
+                disabled={isAddingEgg || isRemovingEgg}
               >
                 {days.map((day) => (
                   <option key={day} value={String(day)}>
@@ -668,6 +681,7 @@ export function MealBoardClient({
                 value={guestDate}
                 onChange={(event) => setGuestDate(event.target.value)}
                 className={fieldClass}
+                disabled={isAddingGuest || isRemovingGuest}
               >
                 {days.map((day) => (
                   <option key={day} value={String(day)}>
@@ -746,7 +760,7 @@ export function MealBoardClient({
           <table className="w-full min-w-max text-sm text-white/90">
             <thead>
               <tr className="border-b border-white/20">
-                <th className="sticky left-0 z-10 bg-white/5 p-2 font-medium text-white/70 dark:bg-black/5">
+                <th className="sticky left-0 z-10 bg-white/10 backdrop-blur-sm p-2 font-medium text-white/70">
                   {t(lang, "pages.mealBoard.memberTotal")}
                 </th>
                 {days.map((day) => {
@@ -783,7 +797,7 @@ export function MealBoardClient({
                     </th>
                   );
                 })}
-                <th className="sticky right-0 z-10 bg-white/5 p-2 font-medium text-white/70 dark:bg-black/5">
+                <th className="sticky right-0 z-10 bg-white/10 backdrop-blur-sm p-2 font-medium text-white/70">
                   {t(lang, "pages.mealBoard.memberTotal")}
                 </th>
               </tr>
@@ -796,7 +810,7 @@ export function MealBoardClient({
                     key={memberId}
                     className="border-b border-white/10 transition-colors hover:bg-white/5"
                   >
-                    <td className="sticky left-0 z-10 bg-white/5 p-2 font-medium dark:bg-black/5">
+                    <td className="sticky left-0 z-10 bg-white/10 backdrop-blur-sm p-2 font-medium">
                       {member.name}
                     </td>
                     {days.map((day) => {
@@ -831,7 +845,7 @@ export function MealBoardClient({
                         </td>
                       );
                     })}
-                    <td className="sticky right-0 z-10 bg-white/5 p-2 text-right font-bold dark:bg-black/5">
+                    <td className="sticky right-0 z-10 bg-white/10 backdrop-blur-sm p-2 text-right font-bold">
                       {days.reduce(
                         (sum, day) => sum + (mealsMap.get(`${memberId}-${day}`) ?? 0),
                         0
@@ -858,7 +872,7 @@ export function MealBoardClient({
                         key={memberId}
                         className="border-b border-white/10 transition-colors hover:bg-white/5"
                       >
-                        <td className="sticky left-0 z-10 bg-white/5 p-2 font-medium dark:bg-black/5">
+                        <td className="sticky left-0 z-10 bg-white/10 backdrop-blur-sm p-2 font-medium">
                           {member.name}
                         </td>
                         {days.map((day) => {
@@ -881,7 +895,7 @@ export function MealBoardClient({
                             </td>
                           );
                         })}
-                        <td className="sticky right-0 z-10 bg-white/5 p-2 text-right font-bold text-emerald-400 dark:bg-black/5">
+                        <td className="sticky right-0 z-10 bg-white/10 backdrop-blur-sm p-2 text-right font-bold text-emerald-400">
                           {days.reduce(
                             (sum, day) => sum + (eggMap.get(`${memberId}-${day}`) ?? 0),
                             0
@@ -894,7 +908,7 @@ export function MealBoardClient({
               ) : null}
 
               <tr className="bg-white/10 font-bold">
-                <td className="sticky left-0 z-10 bg-white/5 p-2 dark:bg-black/5">
+                <td className="sticky left-0 z-10 bg-white/10 backdrop-blur-sm p-2">
                   {t(lang, "pages.mealBoard.dailyTotal")}
                 </td>
                 {days.map((day) => (
@@ -908,7 +922,7 @@ export function MealBoardClient({
                     )}
                   </td>
                 ))}
-                <td className="sticky right-0 z-10 bg-white/5 p-2 text-right dark:bg-black/5">
+                <td className="sticky right-0 z-10 bg-white/10 backdrop-blur-sm p-2 text-right">
                   {days.reduce(
                     (sum, day) =>
                       sum +

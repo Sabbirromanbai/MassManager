@@ -10,7 +10,14 @@ import { FinancialChart } from "@/components/dashboard/FinancialChart";
 import { SignOutButton } from "./SignOutButton";
 import Link from "next/link";
 import { Button } from "@workspace/ui/components/button";
-import { UtensilsCrossed, ShoppingCart, Wallet } from "lucide-react";
+import {
+  UtensilsCrossed,
+  ShoppingCart,
+  Wallet,
+  LayoutDashboard,
+  Users,
+  TrendingUp,
+} from "lucide-react";
 import { Badge } from "@workspace/ui/components/badge";
 import { Member } from "@/lib/models";
 import { cn } from "cn";
@@ -100,6 +107,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         managerName={managerName}
         currentLang={lang}
         delay={0}
+        icon={<LayoutDashboard className="size-5" />}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -136,7 +144,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <StatCard
             title={t(lang, "summary.mealRate")}
             value={formatCurrency(stats.mealRate, 2)}
-            icon={<Wallet className="size-5" />}
+            icon={<TrendingUp className="size-5" />}
             iconTint="red"
             delay={5}
           />
@@ -144,21 +152,37 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="glass p-6 animate-fade-in-up delay-1">
-          <h2 className="text-lg font-semibold mb-4 text-white">{t(lang, "pages.dashboard.mealOverview")}</h2>
+        <section className="glass-strong rounded-2xl border border-white/15 p-5 md:p-6 animate-fade-in-up delay-1 hover-lift">
+          <div className="mb-4 flex items-center gap-2.5">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+              <UtensilsCrossed className="size-4" />
+            </div>
+            <h2 className="text-lg font-semibold text-white">
+              {t(lang, "pages.dashboard.mealOverview")}
+            </h2>
+          </div>
           <MealChart data={stats.mealsPerMember} />
         </section>
 
-        <section className="glass p-6 animate-fade-in-up delay-2">
-          <h2 className="text-lg font-semibold mb-4 text-white">{t(lang, "pages.dashboard.financialSummary")}</h2>
+        <section className="glass-strong rounded-2xl border border-white/15 p-5 md:p-6 animate-fade-in-up delay-2 hover-lift">
+          <div className="mb-4 flex items-center gap-2.5">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-500/15 text-orange-400">
+              <Wallet className="size-4" />
+            </div>
+            <h2 className="text-lg font-semibold text-white">
+              {t(lang, "pages.dashboard.financialSummary")}
+            </h2>
+          </div>
           <FinancialChart data={stats.dailyBazar} />
         </section>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <section className="glass p-6 lg:col-span-2 animate-fade-in-up delay-3">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">{t(lang, "quickActions.title")}</h2>
+        <section className="glass-strong rounded-2xl border border-white/15 p-5 md:p-6 lg:col-span-2 animate-fade-in-up delay-3">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">
+              {t(lang, "quickActions.title")}
+            </h2>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {isManager ? (
@@ -190,24 +214,36 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </div>
         </section>
 
-        <section className="glass p-6 animate-fade-in-up delay-4">
-          <h2 className="text-lg font-semibold mb-4 text-white">{t(lang, "pages.dashboard.ourMembers")}</h2>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
+        <section className="glass-strong rounded-2xl border border-white/15 p-5 md:p-6 animate-fade-in-up delay-4">
+          <div className="mb-4 flex items-center gap-2.5">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+              <Users className="size-4" />
+            </div>
+            <h2 className="text-lg font-semibold text-white">
+              {t(lang, "pages.dashboard.ourMembers")}
+            </h2>
+          </div>
+          <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
             {membersWithMeals.map((member) => (
               <div
                 key={member._id?.toString()}
-                className="flex items-center justify-between py-2 px-3 hover:bg-white/10 rounded-lg transition-colors"
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 transition-colors hover:bg-white/10"
               >
                 <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-sm font-medium text-primary">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500/25 to-emerald-700/15">
+                    <span className="text-sm font-semibold text-emerald-300">
                       {member.name.charAt(0)}
                     </span>
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">{member.name}</p>
-                    <p className="text-xs text-white/70">
-                      {t(lang, "pages.dashboard.mealsThisMonth").replace("{count}", member.mealCount.toString())}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-white">
+                      {member.name}
+                    </p>
+                    <p className="text-xs text-white/60">
+                      {t(lang, "pages.dashboard.mealsThisMonth").replace(
+                        "{count}",
+                        member.mealCount.toString()
+                      )}
                     </p>
                   </div>
                 </div>
@@ -233,22 +269,29 @@ interface StatCardProps {
 }
 
 function StatCard({ title, value, icon, iconTint, variant, delay = 0 }: StatCardProps) {
-  const tintClass = iconTint === "red" ? "bg-red-500/15 text-red-500" : "bg-emerald-500/15 text-emerald-500";
+  const tintClass =
+    iconTint === "red"
+      ? "bg-gradient-to-br from-orange-500/25 to-orange-700/15 text-orange-300"
+      : "bg-gradient-to-br from-emerald-500/25 to-emerald-700/15 text-emerald-300";
   const delayClass = delay > 0 ? `delay-${Math.min(delay, 5)}` : "";
   return (
     <div
       className={cn(
-        "glass p-6 animate-fade-in-up",
+        "glass rounded-2xl border border-white/15 p-5 hover-lift animate-fade-in-up transition-colors",
         delayClass,
         variant === "negative" && "border-red-500/30"
       )}
     >
       <div className="flex items-center justify-between">
-        <div className={`p-2 rounded-lg ${tintClass}`}>{icon}</div>
+        <div className={`flex size-10 items-center justify-center rounded-xl ${tintClass}`}>
+          {icon}
+        </div>
       </div>
       <div className="mt-4">
-        <p className="text-sm text-white/70">{title}</p>
-        <p className="text-2xl font-bold mt-1 text-white">{value}</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-white/60">
+          {title}
+        </p>
+        <p className="mt-1 text-2xl font-bold text-white">{value}</p>
       </div>
     </div>
   );
@@ -266,12 +309,14 @@ function ActionLink({ href, icon, label, fullWidth }: ActionLinkProps) {
     <Link
       href={href}
       className={cn(
-        "glass flex flex-col items-center justify-center gap-2 p-4 transition-colors text-center hover:bg-white/15",
+        "glass group flex flex-col items-center justify-center gap-2 rounded-2xl border border-white/15 p-4 text-center transition-colors hover:bg-white/10 hover-glow",
         fullWidth && "lg:col-span-3"
       )}
     >
-      <div className="p-2 bg-emerald-500/15 rounded-lg text-emerald-500">{icon}</div>
-      <span className="font-medium text-sm text-white">{label}</span>
+      <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 transition-transform duration-200 group-hover:scale-110">
+        {icon}
+      </div>
+      <span className="text-sm font-medium text-white">{label}</span>
     </Link>
   );
 }

@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@workspace/ui/components/button";
+import { cn } from "cn";
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 
 function getCurrentMonthString(): string {
@@ -78,25 +79,35 @@ export function MonthSelector() {
     <div className="relative">
       <Button
         variant="ghost"
-        className="w-full justify-between gap-2 px-3 py-2 text-sm text-white hover:bg-white/10"
+        className="glass-subtle w-full justify-between gap-2 rounded-xl px-3 py-2 text-sm text-white transition-colors hover:bg-white/10"
         onClick={() => setIsOpen(!isOpen)}
       >
         <span className="font-medium">{formatMonth(month)}</span>
-        <ChevronDown className="size-4 text-white" />
+        <ChevronDown className="size-4 text-emerald-300" />
       </Button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg p-2">
-          <div className="flex items-center justify-between mb-2">
-            <Button variant="ghost" size="icon" onClick={goToPrevMonth}>
+        <div className="glass-strong absolute top-full left-0 right-0 z-50 mt-2 rounded-2xl border border-white/15 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.25)] backdrop-blur-xl">
+          <div className="mb-2 flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/10"
+              onClick={goToPrevMonth}
+            >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="font-medium text-foreground">{formatMonth(month)}</span>
-            <Button variant="ghost" size="icon" onClick={goToNextMonth}>
+            <span className="font-medium text-white">{formatMonth(month)}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/10"
+              onClick={goToNextMonth}
+            >
               <ChevronRight className="size-4" />
             </Button>
           </div>
-          <div className="grid grid-cols-3 gap-1 max-h-60 overflow-y-auto">
+          <div className="grid max-h-60 grid-cols-3 gap-1 overflow-y-auto">
             {Array.from({ length: 12 }, (_, i) => {
               const m = String(i + 1).padStart(2, "0");
               const year = parseMonth(month).year;
@@ -107,11 +118,12 @@ export function MonthSelector() {
                   key={optionMonth}
                   variant={isSelected ? "default" : "ghost"}
                   size="sm"
-                  className={`justify-start px-2 py-1 text-xs ${
+                  className={cn(
+                    "justify-start rounded-lg px-2 py-1 text-xs transition-colors",
                     isSelected
-                      ? ""
-                      : "text-popover-foreground hover:bg-accent dark:text-popover-foreground dark:hover:bg-accent"
-                  }`}
+                      ? "bg-emerald-500 text-white hover:bg-emerald-500/90"
+                      : "text-white/80 hover:bg-white/10 hover:text-white"
+                  )}
                   onClick={() => handleMonthChange(optionMonth)}
                 >
                   {new Date(year, i).toLocaleString("default", { month: "short" })}

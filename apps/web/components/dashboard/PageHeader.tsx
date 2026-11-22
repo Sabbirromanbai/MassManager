@@ -29,16 +29,23 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6",
+        "glass-subtle flex flex-col gap-4 rounded-2xl border border-white/15 px-5 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.12)] backdrop-blur-md sm:flex-row sm:items-center sm:justify-between mb-6",
         "animate-fade-in-up",
         delayClass
       )}
     >
-      <div className="flex items-center gap-4 min-w-0">
-        <div>
-          <h1 className="text-2xl font-bold text-white">{t(currentLang, titleKey)}</h1>
+      <div className="flex min-w-0 items-center gap-4">
+        {icon && (
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/25 to-emerald-700/15 text-emerald-300 shadow-[0_0_16px_rgba(16,185,129,0.2)]">
+            {icon}
+          </div>
+        )}
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-bold tracking-tight text-white">
+            {t(currentLang, titleKey)}
+          </h1>
           {subtitleKey && (
-            <p className="text-white/75 mt-1 text-sm">
+            <p className="mt-1 text-sm text-white/70">
               {t(currentLang, subtitleKey)
                 .replace("{month}", month ?? "")
                 .replace("{managerName}", managerName ?? "")}

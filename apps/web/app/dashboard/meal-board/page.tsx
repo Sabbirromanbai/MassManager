@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { MealBoardClient } from "./MealBoardClient";
 import { Lang, t } from "@/lib/lang";
 import { EggEntry, GuestMeal, Member } from "@/lib/models";
+import { UtensilsCrossed } from "lucide-react";
 
 interface MealBoardPageProps {
   searchParams: Promise<{ month?: string }>;
@@ -137,6 +138,7 @@ export default async function MealBoardPage({ searchParams }: MealBoardPageProps
         month={month}
         currentLang={lang}
         delay={0}
+        icon={<UtensilsCrossed className="size-5" />}
       />
 
       <MealBoardClient
