@@ -14,7 +14,7 @@ export const COLLECTIONS = {
 export type MemberType = "regular" | "eggOnly" | "guest";
 
 export interface Member {
-  _id?: ObjectId;
+  _id?: ObjectId | string;
   userId?: string | null;
   email?: string | null;
   name: string;

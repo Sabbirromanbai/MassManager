@@ -29,6 +29,7 @@
   "dependencies": {
     "better-auth": "^1.7.27",
     "mongodb": "^7.9.1",
+    "recharts": "^3.11.0",
     "zod": "^4.6.7"
   }
 }
