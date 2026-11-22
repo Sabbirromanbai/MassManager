@@ -6,7 +6,9 @@ import Link from "next/link";
 import { cn } from "cn";
 import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import { useDashboard } from "@/components/dashboard/DashboardContext";
+import { HeaderActions } from "@/components/header-actions";
 import { getManagerNameForMonth, getCurrentMonth } from "@/lib/manager";
+import { t } from "@/lib/lang";
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -23,31 +25,38 @@ import {
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   icon: React.ReactNode;
   managerOnly?: boolean;
 }
 
-const OVERVIEW_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="size-5" /> },
-];
-
-const DAILY_WORK_ITEMS: NavItem[] = [
-  { href: "/dashboard/meal-board", label: "Meal Board", icon: <UtensilsCrossed className="size-5" /> },
-  { href: "/dashboard/bazar", label: "Daily Bazar", icon: <ShoppingCart className="size-5" /> },
-];
-
-const MONEY_ITEMS: NavItem[] = [
-  { href: "/dashboard/advance", label: "Advance", icon: <Wallet className="size-5" />, managerOnly: true },
-  { href: "/dashboard/monthly", label: "Monthly Hisab", icon: <Calendar className="size-5" />, managerOnly: true },
-];
-
-const PEOPLE_ITEMS: NavItem[] = [
-  { href: "/dashboard/members", label: "Members", icon: <Users className="size-5" /> },
-];
+function getNavItems(lang: "bn" | "en") {
+  return {
+    overview: [
+      { href: "/dashboard", labelKey: "nav.dashboard", icon: <LayoutDashboard className="size-5" /> },
+    ],
+    dailyWork: [
+      { href: "/dashboard/meal-board", labelKey: "nav.mealBoard", icon: <UtensilsCrossed className="size-5" /> },
+      { href: "/dashboard/bazar", labelKey: "nav.dailyBazar", icon: <ShoppingCart className="size-5" /> },
+    ],
+    money: [
+      { href: "/dashboard/advance", labelKey: "nav.advance", icon: <Wallet className="size-5" />, managerOnly: true },
+      { href: "/dashboard/monthly", labelKey: "nav.monthlyHisab", icon: <Calendar className="size-5" />, managerOnly: true },
+    ],
+    people: [
+      { href: "/dashboard/members", labelKey: "nav.members", icon: <Users className="size-5" /> },
+    ],
+    sectionTitles: {
+      overview: t(lang, "nav.overview"),
+      dailyWork: t(lang, "nav.dailyWork"),
+      money: t(lang, "nav.money"),
+      people: t(lang, "nav.people"),
+    },
+  };
+}
 
 export function DashboardSidebar() {
-  const { userName, isManager, allMembers, currentMember } = useDashboard();
+  const { userName, isManager, allMembers, currentMember, lang } = useDashboard();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -55,20 +64,25 @@ export function DashboardSidebar() {
   const month = searchParams.get("month") ?? getCurrentMonth();
   const managerName = getManagerNameForMonth(month);
 
-  const filteredDailyWork = DAILY_WORK_ITEMS;
-  const filteredMoney = MONEY_ITEMS.filter((item) => !item.managerOnly || isManager);
-  const filteredPeople = PEOPLE_ITEMS;
+  const nav = getNavItems(lang);
+  const filteredMoney = nav.money.filter((item) => !item.managerOnly || isManager);
 
   return (
     <aside
       className={cn(
-        "fixed lg:static inset-y-0 left-0 z-40 flex flex-col bg-green-950 text-green-50 transition-all duration-300",
+        "hidden lg:flex lg:static flex-col bg-green-950 text-green-50 transition-all duration-300",
         collapsed ? "w-16" : "w-64"
       )}
     >
       <div className="flex h-16 items-center justify-between px-4 border-b border-green-800">
         {!collapsed && (
-          <span className="font-bold text-lg truncate">Mess Manager</span>
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="Mess Manager" className="size-8 rounded" />
+            <span className="font-bold text-lg truncate">Mess Manager</span>
+          </div>
+        )}
+        {collapsed && (
+          <img src="/logo.png" alt="Mess Manager" className="size-8 rounded mx-auto" />
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
@@ -87,46 +101,54 @@ export function DashboardSidebar() {
         )}
 
         <SidebarSection
-          title="Overview"
-          items={OVERVIEW_ITEMS}
+          title={nav.sectionTitles.overview}
+          items={nav.overview}
           pathname={pathname}
           collapsed={collapsed}
+          lang={lang}
         />
 
         <SidebarSection
-          title="Daily Work"
-          items={filteredDailyWork}
+          title={nav.sectionTitles.dailyWork}
+          items={nav.dailyWork}
           pathname={pathname}
           collapsed={collapsed}
+          lang={lang}
         />
 
         {filteredMoney.length > 0 && (
           <SidebarSection
-            title="Money"
+            title={nav.sectionTitles.money}
             items={filteredMoney}
             pathname={pathname}
             collapsed={collapsed}
+            lang={lang}
           />
         )}
 
         <SidebarSection
-          title="People"
-          items={filteredPeople}
+          title={nav.sectionTitles.people}
+          items={nav.people}
           pathname={pathname}
           collapsed={collapsed}
+          lang={lang}
         />
       </nav>
 
       <div className="p-3 border-t border-green-800">
+        <div className="flex justify-center pt-2 pb-3">
+          <HeaderActions currentLang={lang} variant="sidebar" showSignOut={true} />
+        </div>
+
         {!collapsed && (
           <div className="space-y-3 mb-4">
             <div className="bg-green-900/50 border border-green-800 rounded-lg p-3">
               <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-green-300">Total Bazar</span>
+                <span className="text-green-300">{t(lang, "summary.totalBazar")}</span>
                 <span className="font-medium">৳0</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-green-300">Cash in Hand</span>
+                <span className="text-green-300">{t(lang, "summary.cashInHand")}</span>
                 <span className="font-medium">৳0</span>
               </div>
             </div>
@@ -141,10 +163,10 @@ export function DashboardSidebar() {
                   {isManager ? (
                     <span className="flex items-center gap-1">
                       <BadgeCheck className="size-3" />
-                      Manager
+                      {t(lang, "badges.manager")}
                     </span>
                   ) : (
-                    "Member"
+                    t(lang, "badges.member")
                   )}
                 </p>
               </div>
@@ -172,9 +194,10 @@ interface SidebarSectionProps {
   items: NavItem[];
   pathname: string;
   collapsed: boolean;
+  lang: "bn" | "en";
 }
 
-function SidebarSection({ title, items, pathname, collapsed }: SidebarSectionProps) {
+function SidebarSection({ title, items, pathname, collapsed, lang }: SidebarSectionProps) {
   if (items.length === 0) return null;
 
   return (
@@ -197,10 +220,10 @@ function SidebarSection({ title, items, pathname, collapsed }: SidebarSectionPro
                   : "text-green-200",
                 collapsed && "justify-center"
               )}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? t(lang, item.labelKey) : undefined}
             >
               <span>{item.icon}</span>
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && <span>{t(lang, item.labelKey)}</span>}
             </Link>
           </li>
         ))}

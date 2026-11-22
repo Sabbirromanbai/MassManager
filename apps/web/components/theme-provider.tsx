@@ -68,4 +68,14 @@ function ThemeHotkey() {
   return null;
 }
 
-export { ThemeProvider };
+export function ThemeProviderWrapper({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div suppressHydrationWarning>
+      <ThemeProvider>{children}</ThemeProvider>
+    </div>
+  );
+}

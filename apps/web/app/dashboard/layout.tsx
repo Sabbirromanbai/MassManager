@@ -1,9 +1,11 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getOrLinkMember, isCurrentManagerMember } from "@/lib/currentMember";
 import { getAllMembers } from "@/lib/stats";
 import { DashboardClientLayout } from "./DashboardClientLayout";
+import { Lang } from "@/lib/lang";
 
 export default async function DashboardLayout({
   children,
@@ -17,6 +19,9 @@ export default async function DashboardLayout({
   if (!session?.user) {
     redirect("/sign-in");
   }
+
+  const cookieStore = await cookies();
+  const lang = (cookieStore.get("lang")?.value as Lang) ?? "bn";
 
   const user = session.user;
   const member = await getOrLinkMember({
@@ -47,6 +52,7 @@ export default async function DashboardLayout({
       isManager={isManager}
       allMembers={serializedAllMembers}
       currentMember={serializedMember}
+      lang={lang}
     >
       {children}
     </DashboardClientLayout>

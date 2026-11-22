@@ -77,12 +77,12 @@ export function MonthSelector() {
   return (
     <div className="relative">
       <Button
-        variant="outline"
-        className="w-full justify-between gap-2 px-3 py-2 text-sm"
+        variant="ghost"
+        className="w-full justify-between gap-2 px-3 py-2 text-sm text-white hover:bg-white/10"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span>{formatMonth(month)}</span>
-        <ChevronDown className="size-4" />
+        <span className="font-medium">{formatMonth(month)}</span>
+        <ChevronDown className="size-4 text-white" />
       </Button>
 
       {isOpen && (
@@ -91,7 +91,7 @@ export function MonthSelector() {
             <Button variant="ghost" size="icon" onClick={goToPrevMonth}>
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="font-medium">{formatMonth(month)}</span>
+            <span className="font-medium text-foreground">{formatMonth(month)}</span>
             <Button variant="ghost" size="icon" onClick={goToNextMonth}>
               <ChevronRight className="size-4" />
             </Button>
@@ -101,12 +101,17 @@ export function MonthSelector() {
               const m = String(i + 1).padStart(2, "0");
               const year = parseMonth(month).year;
               const optionMonth = `${year}-${m}`;
+              const isSelected = optionMonth === month;
               return (
                 <Button
                   key={optionMonth}
-                  variant={optionMonth === month ? "default" : "ghost"}
+                  variant={isSelected ? "default" : "ghost"}
                   size="sm"
-                  className="justify-start px-2 py-1 text-xs"
+                  className={`justify-start px-2 py-1 text-xs ${
+                    isSelected
+                      ? ""
+                      : "text-popover-foreground hover:bg-accent dark:text-popover-foreground dark:hover:bg-accent"
+                  }`}
                   onClick={() => handleMonthChange(optionMonth)}
                 >
                   {new Date(year, i).toLocaleString("default", { month: "short" })}

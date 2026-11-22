@@ -1,32 +1,38 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { Button } from "@workspace/ui/components/button";
 import { ArrowLeft, UtensilsCrossed } from "lucide-react";
+import { LanguageToggle } from "@/components/language-toggle";
+import { Lang, t } from "@/lib/lang";
+import { PageHeader } from "@/components/dashboard/PageHeader";
 
-export default function MealBoardPage() {
+interface MealBoardPageProps {
+  searchParams: Promise<{ month?: string }>;
+}
+
+export default async function MealBoardPage({ searchParams }: MealBoardPageProps) {
+  const cookieStore = await cookies();
+  const lang = (cookieStore.get("lang")?.value as Lang) ?? "bn";
+  const resolvedSearchParams = await searchParams;
+  const month = resolvedSearchParams.month;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <ArrowLeft className="size-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <UtensilsCrossed className="size-6" />
-            Meal Board
-          </h1>
-          <p className="text-muted-foreground">Daily meal entry and meal off requests</p>
-        </div>
-      </div>
+      <PageHeader
+        titleKey="pages.mealBoard.title"
+        subtitleKey="pages.mealBoard.subtitle"
+        month={month}
+        currentLang={lang}
+        delay={0}
+      />
 
-      <div className="bg-card border border-border rounded-lg p-8 text-center">
-        <UtensilsCrossed className="size-16 mx-auto text-muted-foreground/50 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Coming Soon</h2>
-        <p className="text-muted-foreground mb-6">
-          Meal board functionality will be implemented here.
+      <div className="glass p-8 text-center animate-fade-in-up delay-1">
+        <UtensilsCrossed className="size-16 mx-auto text-white/50 mb-4" />
+        <h2 className="text-xl font-semibold mb-2 text-white">{t(lang, "pages.mealBoard.comingSoon")}</h2>
+        <p className="text-white/70 mb-6">
+          {t(lang, "pages.mealBoard.description")}
         </p>
-        <Button>Back to Dashboard</Button>
+        <Button className="glass">{t(lang, "buttons.backToDashboard")}</Button>
       </div>
     </div>
   );

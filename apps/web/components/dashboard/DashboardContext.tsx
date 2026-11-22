@@ -2,12 +2,14 @@
 
 import { createContext, useContext, ReactNode } from "react";
 import { Member } from "@/lib/models";
+import { Lang } from "@/lib/lang";
 
 interface DashboardContextValue {
   userName: string;
   isManager: boolean;
   allMembers: Member[];
   currentMember: Member | null;
+  lang: Lang;
 }
 
 const DashboardContext = createContext<DashboardContextValue | null>(null);

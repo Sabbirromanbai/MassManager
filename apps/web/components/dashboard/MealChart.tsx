@@ -19,22 +19,24 @@ interface MealChartProps {
   data: MealData[];
 }
 
-const COLORS = [
+const GREEN_SHADES = [
+  "#16a34a",
   "#22c55e",
-  "#3b82f6",
-  "#f97316",
-  "#eab308",
-  "#a855f7",
-  "#ec4899",
-  "#06b6d4",
-  "#84cc16",
+  "#4ade80",
+  "#86efac",
+  "#bbf7d0",
+  "#dcfce7",
+  "#f0fdf4",
+  "#14532d",
 ];
+
+const RED_ACCENT = "#dc2626";
 
 export function MealChart({ data }: MealChartProps) {
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 w-full">
-        <div className="text-center text-muted-foreground">
+        <div className="text-center text-white/70">
           <p className="font-medium">No data yet</p>
           <p className="text-sm">Meal entries will appear here</p>
         </div>
@@ -43,6 +45,7 @@ export function MealChart({ data }: MealChartProps) {
   }
 
   const totalMeals = data.reduce((sum, d) => sum + d.meals, 0);
+  const maxIndex = data.reduce((maxIdx, d, i) => (d.meals > (data[maxIdx]?.meals ?? 0) ? i : maxIdx), 0);
 
   return (
     <div className="h-64 w-full">
@@ -65,14 +68,19 @@ export function MealChart({ data }: MealChartProps) {
             labelLine={false}
           >
             {data.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              <Cell
+                key={`cell-${index}`}
+                fill={index === maxIndex ? RED_ACCENT : GREEN_SHADES[index % GREEN_SHADES.length]}
+              />
             ))}
           </Pie>
           <Tooltip
             contentStyle={{
-              backgroundColor: "hsl(var(--card))",
-              border: "1px solid hsl(var(--border))",
+              backgroundColor: "rgba(255, 255, 255, 0.1)",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
               borderRadius: "8px",
+              backdropFilter: "blur(12px)",
+              color: "white",
             }}
           />
           <Legend
@@ -84,8 +92,8 @@ export function MealChart({ data }: MealChartProps) {
           />
         </PieChart>
       </ResponsiveContainer>
-      <div className="mt-4 text-center text-sm text-muted-foreground">
-        Total meals: <span className="font-medium">{totalMeals}</span>
+      <div className="mt-4 text-center text-sm text-white/70">
+        Total meals: <span className="font-medium text-white">{totalMeals}</span>
       </div>
     </div>
   );
