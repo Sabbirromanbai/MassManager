@@ -126,6 +126,10 @@
   body {
     @apply bg-background text-foreground;
     }
+  select option {
+    color: #1c1917;
+    background-color: #ffffff;
+    }
   }
 
 @layer utilities {
@@ -161,7 +165,7 @@
 
 .animate-fade-in-up {
   animation: fade-in-up 300ms ease-out forwards;
-  opacity: 0;
+  opacity: 1;
 }
 
 .delay-1 { animation-delay: 50ms; }

@@ -16,8 +16,31 @@ export const createMealSchema = z.object({
   memberId: z.string().min(1, "Member ID is required"),
   month: monthSchema,
   date: dateSchema,
-  count: z.number().int().min(1).max(3, "Count must be 1, 2, or 3"),
-  createdBy: z.string().min(1, "Created by is required"),
+  count: z.number().int().min(1).max(2, "Count must be 1 or 2").default(2),
+});
+
+export const createEggEntryRequestSchema = z.object({
+  memberId: z.string().min(1, "Member ID is required"),
+  month: monthSchema,
+  date: dateSchema,
+  pieces: z.number().int().positive("Pieces must be a positive integer"),
+});
+
+export const deleteEggEntryRequestSchema = z.object({
+  memberId: z.string().min(1, "Member ID is required"),
+  month: monthSchema,
+  date: dateSchema,
+});
+
+export const createGuestMealRequestSchema = z.object({
+  month: monthSchema,
+  date: dateSchema,
+  meals: z.number().int().min(1).max(3, "Meals must be 1, 2, or 3"),
+});
+
+export const deleteGuestMealRequestSchema = z.object({
+  month: monthSchema,
+  date: dateSchema,
 });
 
 export const createBazarEntrySchema = z.object({
