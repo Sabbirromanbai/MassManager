@@ -11,18 +11,21 @@ const globalForMongo = globalThis as unknown as {
   mongoDb: Db | undefined;
 };
 
+export async function getClient(): Promise<MongoClient> {
+  if (globalForMongo.mongoClient) {
+    return globalForMongo.mongoClient;
+  }
+  const client = new MongoClient(uri);
+  globalForMongo.mongoClient = client;
+  return client;
+}
+
 export async function getDb(): Promise<Db> {
   if (globalForMongo.mongoDb) {
     return globalForMongo.mongoDb;
   }
-
-  const client = globalForMongo.mongoClient ?? new MongoClient(uri);
-  globalForMongo.mongoClient = client;
-
-  // The MongoDB driver connects lazily on first operation. Avoid connecting
-  // here so builds do not require database network access at compile time.
+  const client = await getClient();
   const db = client.db("mess-manager");
   globalForMongo.mongoDb = db;
-
   return db;
 }
