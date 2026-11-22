@@ -1,6 +1,6 @@
 import { Db, ObjectId, Collection } from "mongodb";
 import { getDb } from "./db";
-import { Member } from "./models";
+import { EggEntry, GuestMeal, Member, MemberType } from "./models";
 
 export interface DashboardStats {
   totalBazar: number;
@@ -192,4 +192,153 @@ export async function getDashboardMembersWithMeals(month: string): Promise<Dashb
     ...member,
     mealCount: mealMap.get(member._id!.toString()) ?? 0,
   }));
+}
+
+export interface MemberSettlement {
+  memberId: string;
+  memberName: string;
+  memberType: MemberType;
+  meals: number;
+  mealCost: number;
+  eggPieces: number;
+  eggCost: number;
+  guestMeals: number;
+  guestCost: number;
+  advance: number;
+  due: number;
+}
+
+export interface MonthlySettlement {
+  month: string;
+  totalBazar: number;
+  totalAdvance: number;
+  totalMeal: number;
+  mealRate: number;
+  cashInHand: number;
+  members: MemberSettlement[];
+}
+
+export async function getMonthlySettlement(
+  month: string
+): Promise<MonthlySettlement> {
+  const db = await getDb();
+  const memberCollection = db.collection<Member>("members");
+  const mealCollection = db.collection("meals");
+  const bazarCollection = db.collection("bazarEntries");
+  const advanceCollection = db.collection("advances");
+  const eggCollection = db.collection<EggEntry>("eggEntries");
+  const guestCollection = db.collection<GuestMeal>("guestMeals");
+
+  const members = await memberCollection
+    .find({ isActive: true })
+    .sort({ name: 1 })
+    .toArray();
+
+  const [
+    totalBazar,
+    totalAdvance,
+    totalMeal,
+    mealsByMember,
+    advancesByMember,
+    eggEntries,
+    guestEntries,
+  ] = await Promise.all([
+    getTotalBazar(bazarCollection, month),
+    getTotalAdvance(advanceCollection, month),
+    getTotalMeal(mealCollection, month),
+    mealCollection
+      .aggregate<{ _id: ObjectId; meals: number }>([
+        { $match: { month } },
+        { $group: { _id: "$memberId", meals: { $sum: "$count" } } },
+      ])
+      .toArray(),
+    advanceCollection
+      .aggregate<{ _id: ObjectId; advance: number }>([
+        { $match: { month } },
+        { $group: { _id: "$memberId", advance: { $sum: "$amount" } } },
+      ])
+      .toArray(),
+    eggCollection.find({ month }).toArray(),
+    guestCollection.find({ month }).toArray(),
+  ]);
+
+  const mealMap = new Map(
+    mealsByMember.map((m) => [m._id.toString(), m.meals])
+  );
+  const advanceMap = new Map(
+    advancesByMember.map((a) => [a._id.toString(), a.advance])
+  );
+
+  const mealRate = totalMeal > 0 ? totalBazar / totalMeal : 0;
+
+  const eggByMember = new Map<string, { pieces: number; cost: number }>();
+  for (const entry of eggEntries) {
+    const id = entry.memberId.toString();
+    const current = eggByMember.get(id) ?? { pieces: 0, cost: 0 };
+    current.pieces += entry.pieces;
+    current.cost += entry.pieces * entry.pricePerPiece;
+    eggByMember.set(id, current);
+  }
+
+  const guestByName = new Map<string, { meals: number; cost: number }>();
+  for (const entry of guestEntries) {
+    const current = guestByName.get(entry.guestName) ?? { meals: 0, cost: 0 };
+    current.meals += entry.meals;
+    current.cost += entry.meals * entry.ratePerMeal;
+    guestByName.set(entry.guestName, current);
+  }
+
+  const memberSettlements: MemberSettlement[] = members.map((member) => {
+    const id = member._id!.toString();
+    const type = member.type;
+
+    const advance = advanceMap.get(id) ?? 0;
+
+    let meals = 0;
+    let mealCost = 0;
+    let eggPieces = 0;
+    let eggCost = 0;
+    let guestMeals = 0;
+    let guestCost = 0;
+
+    if (type === "regular") {
+      meals = mealMap.get(id) ?? 0;
+      mealCost = meals * mealRate;
+    } else if (type === "eggOnly") {
+      const egg = eggByMember.get(id);
+      eggPieces = egg?.pieces ?? 0;
+      eggCost = egg?.cost ?? 0;
+    } else if (type === "guest") {
+      const guest = guestByName.get(member.name);
+      guestMeals = guest?.meals ?? 0;
+      guestCost = guest?.cost ?? 0;
+    }
+
+    const cost = mealCost + eggCost + guestCost;
+    const due = cost - advance;
+
+    return {
+      memberId: id,
+      memberName: member.name,
+      memberType: type,
+      meals,
+      mealCost,
+      eggPieces,
+      eggCost,
+      guestMeals,
+      guestCost,
+      advance,
+      due,
+    };
+  });
+
+  return {
+    month,
+    totalBazar,
+    totalAdvance,
+    totalMeal,
+    mealRate,
+    cashInHand: totalAdvance - totalBazar,
+    members: memberSettlements,
+  };
 }

@@ -63,7 +63,14 @@ export const createAdvanceSchema = z.object({
   month: monthSchema,
   date: dateSchema,
   amount: positiveNumberSchema,
-  receivedBy: z.string().min(1, "Received by is required"),
+});
+
+export const updateAdvanceSchema = z.object({
+  id: z.string().min(1, "Entry ID is required"),
+  memberId: z.string().min(1, "Member ID is required").optional(),
+  month: monthSchema.optional(),
+  date: dateSchema.optional(),
+  amount: positiveNumberSchema.optional(),
 });
 
 export const createEggEntrySchema = z.object({
