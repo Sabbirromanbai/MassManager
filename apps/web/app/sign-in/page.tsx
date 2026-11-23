@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@workspace/ui/components/button";
 import { signIn } from "@/lib/auth-client";
 import { HeaderActions } from "@/components/header-actions";
+import { PasswordInput } from "@/components/password-input";
 import { t } from "@/lib/lang";
 
 type Lang = "bn" | "en";
@@ -129,18 +130,16 @@ export default function SignInPage() {
               >
                 {t(lang, "auth.password")}
               </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
-                autoComplete="current-password"
+                lang={lang}
                 value={password}
-                onChange={(event) => setPassword((event.target as HTMLInputElement).value)}
+                onChange={(value) => setPassword(value)}
+                autoComplete="current-password"
                 required
+                disabled={loading}
                 aria-invalid={error ? true : undefined}
                 aria-describedby={error ? "form-error" : undefined}
-                placeholder="••••••••"
-                className={fieldClass}
-                disabled={loading}
               />
             </div>
 

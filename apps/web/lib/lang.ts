@@ -314,6 +314,8 @@ export const dict: Record<Lang, Record<string, unknown>> = {
       name: "নাম",
       email: "ইমেইল",
       password: "পাসওয়ার্ড",
+      showPassword: "পাসওয়ার্ড দেখান",
+      hidePassword: "পাসওয়ার্ড লুকান",
     },
     common: {
       overviewFor: "ওভারভিউ",
@@ -645,6 +647,8 @@ export const dict: Record<Lang, Record<string, unknown>> = {
       name: "Name",
       email: "Email",
       password: "Password",
+      showPassword: "Show password",
+      hidePassword: "Hide password",
     },
     common: {
       overviewFor: "Overview for",
