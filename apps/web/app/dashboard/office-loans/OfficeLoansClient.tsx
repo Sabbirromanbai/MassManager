@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "cn";
 import { Button } from "@workspace/ui/components/button";
+import { useToast } from "@workspace/ui/components/toast";
 import { Lang, t } from "@/lib/lang";
 import {
   CalendarDays,
@@ -190,7 +191,16 @@ export function OfficeLoansClient({
   const [summary, setSummary] = useState<OfficeLoanSummaryView>(initialSummary);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(initialError);
-  const [notice, setNotice] = useState("");
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (initialError) {
+      toast({
+        title: t(lang, "pages.officeLoans.errorLoad"),
+        variant: "error",
+      });
+    }
+  }, [initialError, lang, toast]);
 
   const [loanForm, setLoanForm] = useState<LoanFormState>(emptyForm(defaultDate));
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -249,7 +259,6 @@ export function OfficeLoansClient({
 
   async function refresh() {
     setLoading(true);
-    setError("");
 
     try {
       const response = await fetch("/api/office-loans", {
@@ -273,9 +282,14 @@ export function OfficeLoansClient({
       setLoans(payload.loans);
       setSummary(payload.summary);
     } catch (caught) {
-      setError(
-        errorMessage(caught, t(lang, "pages.officeLoans.errorLoad"))
-      );
+      toast({
+        title: t(lang, "pages.officeLoans.errorLoad"),
+        variant: "error",
+        description: errorMessage(
+          caught,
+          t(lang, "pages.officeLoans.errorLoad")
+        ),
+      });
     } finally {
       setLoading(false);
     }
@@ -285,13 +299,11 @@ export function OfficeLoansClient({
     const validationError = validateForm(loanForm);
     if (validationError) {
       setError(validationError);
-      setNotice("");
       return;
     }
 
     setSavingLoan(true);
     setError("");
-    setNotice("");
 
     const isEdit = editingId !== null;
     try {
@@ -322,17 +334,26 @@ export function OfficeLoansClient({
         );
       }
 
-      setNotice(
-        t(
+      toast({
+        title: t(
           lang,
           isEdit ? "pages.officeLoans.loanUpdated" : "pages.officeLoans.loanAdded"
-        )
-      );
+        ),
+        variant: "success",
+        description: t(lang, "pages.officeLoans.toastDescription"),
+      });
       resetLoanForm();
       await refresh();
     } catch (caught) {
-      setError(
-        errorMessage(
+      toast({
+        title: t(
+          lang,
+          isEdit
+            ? "pages.officeLoans.errorNotFound"
+            : "pages.officeLoans.errorNotManager"
+        ),
+        variant: "error",
+        description: errorMessage(
           caught,
           t(
             lang,
@@ -340,8 +361,8 @@ export function OfficeLoansClient({
               ? "pages.officeLoans.errorNotFound"
               : "pages.officeLoans.errorNotManager"
           )
-        )
-      );
+        ),
+      });
     } finally {
       setSavingLoan(false);
     }
@@ -355,7 +376,6 @@ export function OfficeLoansClient({
       note: loan.note ?? "",
     });
     setError("");
-    setNotice("");
     document.getElementById("office-loan-form")?.scrollIntoView({
       behavior: "smooth",
       block: "center",
@@ -369,7 +389,6 @@ export function OfficeLoansClient({
 
     setDeletingLoanId(loan.id);
     setError("");
-    setNotice("");
 
     try {
       const response = await fetch("/api/office-loans", {
@@ -387,13 +406,19 @@ export function OfficeLoansClient({
         );
       }
 
-      setNotice(t(lang, "pages.officeLoans.loanRemoved"));
+      toast({
+        title: t(lang, "pages.officeLoans.loanRemoved"),
+        variant: "success",
+        description: t(lang, "pages.officeLoans.toastDescription"),
+      });
       if (editingId === loan.id) resetLoanForm();
       await refresh();
     } catch (caught) {
-      setError(
-        errorMessage(caught, t(lang, "pages.officeLoans.errorNotFound"))
-      );
+      toast({
+        title: t(lang, "pages.officeLoans.errorNotFound"),
+        variant: "error",
+        description: errorMessage(caught, t(lang, "pages.officeLoans.errorNotFound")),
+      });
     } finally {
       setDeletingLoanId(null);
     }
@@ -404,13 +429,11 @@ export function OfficeLoansClient({
     const validationError = validateForm(form);
     if (validationError) {
       setError(validationError);
-      setNotice("");
       return;
     }
 
     setSavingRepaymentId(loanId);
     setError("");
-    setNotice("");
 
     try {
       const response = await fetch("/api/office-loans/repayments", {
@@ -434,12 +457,21 @@ export function OfficeLoansClient({
       }
 
       clearRepaymentForm(loanId);
-      setNotice(t(lang, "pages.officeLoans.repaymentAdded"));
+      toast({
+        title: t(lang, "pages.officeLoans.repaymentAdded"),
+        variant: "success",
+        description: t(lang, "pages.officeLoans.toastDescription"),
+      });
       await refresh();
     } catch (caught) {
-      setError(
-        errorMessage(caught, t(lang, "pages.officeLoans.errorValidation"))
-      );
+      toast({
+        title: t(lang, "pages.officeLoans.errorValidation"),
+        variant: "error",
+        description: errorMessage(
+          caught,
+          t(lang, "pages.officeLoans.errorValidation")
+        ),
+      });
     } finally {
       setSavingRepaymentId(null);
     }
@@ -452,7 +484,6 @@ export function OfficeLoansClient({
 
     setDeletingRepaymentId(repaymentId);
     setError("");
-    setNotice("");
 
     try {
       const response = await fetch("/api/office-loans/repayments", {
@@ -470,12 +501,18 @@ export function OfficeLoansClient({
         );
       }
 
-      setNotice(t(lang, "pages.officeLoans.repaymentRemoved"));
+      toast({
+        title: t(lang, "pages.officeLoans.repaymentRemoved"),
+        variant: "success",
+        description: t(lang, "pages.officeLoans.toastDescription"),
+      });
       await refresh();
     } catch (caught) {
-      setError(
-        errorMessage(caught, t(lang, "pages.officeLoans.errorNotFound"))
-      );
+      toast({
+        title: t(lang, "pages.officeLoans.errorNotFound"),
+        variant: "error",
+        description: errorMessage(caught, t(lang, "pages.officeLoans.errorNotFound")),
+      });
     } finally {
       setDeletingRepaymentId(null);
     }
@@ -511,18 +548,9 @@ export function OfficeLoansClient({
         <p
           role="alert"
           aria-live="assertive"
-          className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm app-text-danger"
+          className="mb-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm app-text-danger"
         >
           {error}
-        </p>
-      )}
-      {notice && (
-        <p
-          role="status"
-          aria-live="polite"
-          className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm app-text-emerald"
-        >
-          {notice}
         </p>
       )}
 

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ToastProvider } from "@workspace/ui/components/toast";
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
 
 function ThemeProvider({
@@ -75,7 +76,9 @@ export function ThemeProviderWrapper({
 }) {
   return (
     <div suppressHydrationWarning>
-      <ThemeProvider>{children}</ThemeProvider>
+      <ThemeProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </ThemeProvider>
     </div>
   );
 }

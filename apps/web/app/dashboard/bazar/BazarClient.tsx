@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "cn";
 import { Button } from "@workspace/ui/components/button";
+import { useToast } from "@workspace/ui/components/toast";
 import { Lang, t } from "@/lib/lang";
 import { getWeekdayKey } from "@/lib/mealBoard";
 import { ShoppingCart, Plus, Pencil, Trash2, Wallet } from "lucide-react";
@@ -18,7 +19,7 @@ export interface BazarEntryView {
   createdAt: string;
 }
 
-interface BazarClientProps {
+export interface BazarClientProps {
   lang: Lang;
   month: string;
   isManager: boolean;
@@ -71,11 +72,17 @@ export function BazarClient({
   lang,
   month,
   isManager,
-  entries,
+  entries: initialEntries,
 }: BazarClientProps) {
   const days = Array.from({ length: daysInMonth(month) }, (_, i) => i + 1);
   const today = new Date().getDate();
   const initialDay = days.includes(today) ? today : days[0] ?? 1;
+
+  const { toast } = useToast();
+
+  const [entriesState, setEntriesState] = useState<BazarEntryView[]>(
+    initialEntries
+  );
 
   const [date, setDate] = useState<string>(String(initialDay));
   const [description, setDescription] = useState<string>("");
@@ -84,9 +91,8 @@ export function BazarClient({
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
-  const total = entries.reduce((sum, entry) => sum + entry.amount, 0);
+  const total = entriesState.reduce((sum, entry) => sum + entry.amount, 0);
 
   const weekdayLabel = (key: string): string => {
     const translated = t(lang, `weekdaysLong.${key}`);
@@ -99,12 +105,39 @@ export function BazarClient({
     return weekday ? `${day} — ${weekday}` : String(day);
   };
 
+  async function refreshEntries() {
+    try {
+      const response = await fetch(`/api/bazar?month=${encodeURIComponent(month)}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error(
+          await readServerError(response, t(lang, "pages.bazar.errorLoad"))
+        );
+      }
+      const data: unknown = await response.json();
+      if (
+        typeof data === "object" &&
+        data !== null &&
+        "entries" in data &&
+        Array.isArray((data as { entries?: unknown }).entries)
+      ) {
+        setEntriesState((data as { entries: BazarEntryView[] }).entries);
+      }
+    } catch {
+      // Keep the existing entries if refresh fails; the toast already confirmed the mutation.
+    }
+  }
+
   function resetForm() {
     setDate(String(initialDay));
     setDescription("");
     setAmount("");
     setEditingId(null);
+    setError("");
   }
+
+  const entries = entriesState;
 
   async function handleSubmit() {
     const parsedDate = Number.parseInt(date, 10);
@@ -125,18 +158,18 @@ export function BazarClient({
 
     setIsSaving(true);
     setError("");
-    setSuccess("");
 
+    const isEdit = editingId !== null;
     try {
-      const url = editingId ? "/api/bazar" : "/api/bazar";
-      const method = editingId ? "PATCH" : "POST";
+      const url = "/api/bazar";
+      const method = isEdit ? "PATCH" : "POST";
       const body: Record<string, unknown> = {
         month,
         date: parsedDate,
         description: description.trim(),
         amount: parsedAmount,
       };
-      if (editingId) body.id = editingId;
+      if (isEdit) body.id = editingId;
 
       const response = await fetch(url, {
         method,
@@ -145,30 +178,32 @@ export function BazarClient({
       });
 
       if (!response.ok) {
-        setError(
+        throw new Error(
           await readServerError(
             response,
-            editingId
+            isEdit
               ? t(lang, "pages.bazar.errorNotFound")
               : t(lang, "pages.bazar.errorNotManager")
           )
         );
-        return;
       }
 
-      setSuccess(
-        editingId
-          ? t(lang, "pages.bazar.entryUpdated")
-          : t(lang, "pages.bazar.entryAdded")
-      );
+      toast({
+        title: t(lang, isEdit ? "pages.bazar.entryUpdated" : "pages.bazar.entryAdded"),
+        variant: "success",
+        description: t(lang, "pages.bazar.toastDescription"),
+      });
+      await refreshEntries();
       resetForm();
-      window.location.reload();
-    } catch {
-      setError(
-        editingId
-          ? t(lang, "pages.bazar.errorNotFound")
-          : t(lang, "pages.bazar.errorNotManager")
-      );
+    } catch (caught) {
+      toast({
+        title: t(lang, "pages.bazar.errorOperation"),
+        variant: "error",
+        description:
+          caught instanceof Error && caught.message
+            ? caught.message
+            : t(lang, "pages.bazar.errorNotManager"),
+      });
     } finally {
       setIsSaving(false);
     }
@@ -176,8 +211,6 @@ export function BazarClient({
 
   async function handleDelete(id: string) {
     setDeletingId(id);
-    setError("");
-    setSuccess("");
 
     try {
       const response = await fetch("/api/bazar", {
@@ -187,19 +220,26 @@ export function BazarClient({
       });
 
       if (!response.ok) {
-        setError(
-          await readServerError(
-            response,
-            t(lang, "pages.bazar.errorNotFound")
-          )
+        throw new Error(
+          await readServerError(response, t(lang, "pages.bazar.errorNotFound"))
         );
-        return;
       }
 
-      setSuccess(t(lang, "pages.bazar.entryRemoved"));
-      window.location.reload();
-    } catch {
-      setError(t(lang, "pages.bazar.errorNotFound"));
+      toast({
+        title: t(lang, "pages.bazar.entryRemoved"),
+        variant: "success",
+        description: t(lang, "pages.bazar.toastDescription"),
+      });
+      await refreshEntries();
+    } catch (caught) {
+      toast({
+        title: t(lang, "pages.bazar.errorOperation"),
+        variant: "error",
+        description:
+          caught instanceof Error && caught.message
+            ? caught.message
+            : t(lang, "pages.bazar.errorNotFound"),
+      });
     } finally {
       setDeletingId(null);
     }
@@ -211,7 +251,6 @@ export function BazarClient({
     setDescription(entry.description);
     setAmount(String(entry.amount));
     setError("");
-    setSuccess("");
   }
 
   const empty = entries.length === 0;
@@ -324,14 +363,6 @@ export function BazarClient({
               className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm app-text-danger"
             >
               {error}
-            </p>
-          )}
-          {success && (
-            <p
-              role="status"
-              className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm app-text-emerald"
-            >
-              {success}
             </p>
           )}
         </section>

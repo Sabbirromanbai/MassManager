@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "cn";
 import { Button } from "@workspace/ui/components/button";
+import { useToast } from "@workspace/ui/components/toast";
 import { Lang, t } from "@/lib/lang";
 import { getWeekdayKey } from "@/lib/mealBoard";
 import { Wallet, Plus, Pencil, Trash2, User } from "lucide-react";
@@ -80,11 +81,17 @@ export function AdvanceClient({
   isManager,
   currentMemberId,
   members,
-  entries,
+  entries: initialEntries,
 }: AdvanceClientProps) {
   const days = Array.from({ length: daysInMonth(month) }, (_, i) => i + 1);
   const today = new Date().getDate();
   const initialDay = days.includes(today) ? today : days[0] ?? 1;
+
+  const { toast } = useToast();
+
+  const [entriesState, setEntriesState] = useState<AdvanceEntryView[]>(
+    initialEntries
+  );
 
   const [memberId, setMemberId] = useState<string>(
     isManager ? (members[0]?.id ?? "") : currentMemberId
@@ -95,8 +102,8 @@ export function AdvanceClient({
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
+  const entries = entriesState;
   const total = entries.reduce((sum, entry) => sum + entry.amount, 0);
 
   const memberTotals = members
@@ -121,11 +128,39 @@ export function AdvanceClient({
     return weekday ? `${day} — ${weekday}` : String(day);
   };
 
+  async function refreshEntries() {
+    try {
+      const response = await fetch(
+        `/api/advances?month=${encodeURIComponent(month)}`,
+        {
+          cache: "no-store",
+        }
+      );
+      if (!response.ok) {
+        throw new Error(
+          await readServerError(response, t(lang, "pages.advance.errorLoad"))
+        );
+      }
+      const data: unknown = await response.json();
+      if (
+        typeof data === "object" &&
+        data !== null &&
+        "entries" in data &&
+        Array.isArray((data as { entries?: unknown }).entries)
+      ) {
+        setEntriesState((data as { entries: AdvanceEntryView[] }).entries);
+      }
+    } catch {
+      // Keep the existing entries if refresh fails; the toast already confirmed the mutation.
+    }
+  }
+
   function resetForm() {
     setMemberId(isManager ? (members[0]?.id ?? "") : currentMemberId);
     setDate(String(initialDay));
     setAmount("");
     setEditingId(null);
+    setError("");
   }
 
   async function handleSubmit() {
@@ -147,18 +182,18 @@ export function AdvanceClient({
 
     setIsSaving(true);
     setError("");
-    setSuccess("");
 
+    const isEdit = editingId !== null;
     try {
       const url = "/api/advances";
-      const method = editingId ? "PATCH" : "POST";
+      const method = isEdit ? "PATCH" : "POST";
       const body: Record<string, unknown> = {
         memberId,
         month,
         date: parsedDate,
         amount: parsedAmount,
       };
-      if (editingId) body.id = editingId;
+      if (isEdit) body.id = editingId;
 
       const response = await fetch(url, {
         method,
@@ -167,30 +202,32 @@ export function AdvanceClient({
       });
 
       if (!response.ok) {
-        setError(
+        throw new Error(
           await readServerError(
             response,
-            editingId
+            isEdit
               ? t(lang, "pages.advance.errorNotFound")
               : t(lang, "pages.advance.errorNotManager")
           )
         );
-        return;
       }
 
-      setSuccess(
-        editingId
-          ? t(lang, "pages.advance.entryUpdated")
-          : t(lang, "pages.advance.entryAdded")
-      );
+      toast({
+        title: t(lang, isEdit ? "pages.advance.entryUpdated" : "pages.advance.entryAdded"),
+        variant: "success",
+        description: t(lang, "pages.advance.toastDescription"),
+      });
+      await refreshEntries();
       resetForm();
-      window.location.reload();
-    } catch {
-      setError(
-        editingId
-          ? t(lang, "pages.advance.errorNotFound")
-          : t(lang, "pages.advance.errorNotManager")
-      );
+    } catch (caught) {
+      toast({
+        title: t(lang, "pages.advance.errorOperation"),
+        variant: "error",
+        description:
+          caught instanceof Error && caught.message
+            ? caught.message
+            : t(lang, "pages.advance.errorNotManager"),
+      });
     } finally {
       setIsSaving(false);
     }
@@ -198,8 +235,6 @@ export function AdvanceClient({
 
   async function handleDelete(id: string) {
     setDeletingId(id);
-    setError("");
-    setSuccess("");
 
     try {
       const response = await fetch("/api/advances", {
@@ -209,19 +244,26 @@ export function AdvanceClient({
       });
 
       if (!response.ok) {
-        setError(
-          await readServerError(
-            response,
-            t(lang, "pages.advance.errorNotFound")
-          )
+        throw new Error(
+          await readServerError(response, t(lang, "pages.advance.errorNotFound"))
         );
-        return;
       }
 
-      setSuccess(t(lang, "pages.advance.entryRemoved"));
-      window.location.reload();
-    } catch {
-      setError(t(lang, "pages.advance.errorNotFound"));
+      toast({
+        title: t(lang, "pages.advance.entryRemoved"),
+        variant: "success",
+        description: t(lang, "pages.advance.toastDescription"),
+      });
+      await refreshEntries();
+    } catch (caught) {
+      toast({
+        title: t(lang, "pages.advance.errorOperation"),
+        variant: "error",
+        description:
+          caught instanceof Error && caught.message
+            ? caught.message
+            : t(lang, "pages.advance.errorNotFound"),
+      });
     } finally {
       setDeletingId(null);
     }
@@ -233,7 +275,6 @@ export function AdvanceClient({
     setDate(String(entry.date));
     setAmount(String(entry.amount));
     setError("");
-    setSuccess("");
   }
 
   const empty = entries.length === 0;
@@ -268,6 +309,9 @@ export function AdvanceClient({
                 className={fieldClass}
                 disabled={isSaving}
               >
+                <option value="" disabled>
+                  {t(lang, "pages.advance.memberLabel")}
+                </option>
                 {members.map((member) => (
                   <option key={member.id} value={member.id}>
                     {member.name}
@@ -352,14 +396,6 @@ export function AdvanceClient({
               {error}
             </p>
           )}
-          {success && (
-            <p
-              role="status"
-              className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm app-text-emerald"
-            >
-              {success}
-            </p>
-          )}
         </section>
       )}
 
@@ -382,27 +418,6 @@ export function AdvanceClient({
             {formatAmount(total, lang)}
           </p>
         </div>
-
-        {isManager && memberTotals.length > 0 && (
-          <div className="mb-4 space-y-1.5 border-t app-border pt-3">
-            <p className="text-xs font-medium uppercase tracking-wide app-text-faint">
-              {t(lang, "pages.advance.memberTotals")}
-            </p>
-            <div className="grid gap-1.5 sm:grid-cols-2">
-              {memberTotals.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex min-w-0 items-center justify-between gap-2 rounded-lg app-surface px-3 py-1.5 text-sm"
-                >
-                  <span className="truncate app-text-muted">{member.name}</span>
-                  <span className="shrink-0 font-medium tabular-nums app-text">
-                    {formatAmount(member.total, lang)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </section>
 
       <section className={cardClass}>
@@ -429,9 +444,6 @@ export function AdvanceClient({
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="flex size-10 shrink-0 flex-col items-center justify-center rounded-xl app-tint-emerald app-text-emerald">
                     <span className="text-sm font-bold leading-none">{entry.date}</span>
-                    <span className="text-[9px] uppercase tracking-wide">
-                      {weekdayLabel(entry.date).slice(0, 3)}
-                    </span>
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium app-text">
