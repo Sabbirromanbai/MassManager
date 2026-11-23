@@ -1357,7 +1357,7 @@ export function MealBoardClient({
         </section>
       )}
 
-      {!isManager && (
+      {!isManager && currentMember.type === "regular" && currentMember.isActive && (
         <section className={cn(cardClass, "animate-fade-in-up delay-2")}>
           <h3 className="mb-3 text-base font-semibold app-text sm:text-lg">
             {t(lang, "pages.mealBoard.mealOffRequest")}

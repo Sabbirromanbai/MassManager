@@ -44,6 +44,7 @@ function getNavItems(lang: "bn" | "en") {
       { href: "/dashboard/advance", labelKey: "nav.advance", icon: <Wallet className="size-5" />, managerOnly: true },
       { href: "/dashboard/office-loans", labelKey: "nav.officeLoan", icon: <Landmark className="size-5" />, managerOnly: true },
       { href: "/dashboard/monthly", labelKey: "nav.monthlyHisab", icon: <Calendar className="size-5" />, managerOnly: true },
+      { href: "/dashboard/member-report", labelKey: "nav.memberReport", icon: <User className="size-5" /> },
     ],
     people: [
       { href: "/dashboard/members", labelKey: "nav.members", icon: <Users className="size-5" /> },

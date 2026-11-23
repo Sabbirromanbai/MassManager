@@ -88,23 +88,6 @@ export function ToastProvider({
     []
   );
 
-  // Auto-dismiss each toast after its duration elapses.
-  React.useEffect(() => {
-    const timers: Record<string, ReturnType<typeof setTimeout>> = {};
-    toasts.forEach((toast) => {
-      if (toast.duration && toast.duration > 0) {
-        timers[toast.id] = setTimeout(() => {
-          setToasts((previous) =>
-            previous.filter((item) => item.id !== toast.id)
-          );
-        }, toast.duration);
-      }
-    });
-    return () => {
-      Object.values(timers).forEach((timer) => clearTimeout(timer));
-    };
-  }, [toasts]);
-
   const value = useMemo(
     () => ({ toasts, toast, dismiss }),
     [toasts, toast, dismiss]
@@ -178,6 +161,14 @@ function Toast({ toast, onDismiss }: ToastProps) {
   useEffect(() => {
     setEntering(true);
   }, []);
+
+  // Each toast owns its timer so a newly added toast cannot restart the
+  // countdown of the ones already on screen.
+  useEffect(() => {
+    if (!toast.duration || toast.duration <= 0) return;
+    const timer = setTimeout(() => onDismiss(toast.id), toast.duration);
+    return () => clearTimeout(timer);
+  }, [toast.id, toast.duration, onDismiss]);
 
   const classes = cn(
     "pointer-events-auto flex items-center gap-3 rounded-xl border p-3 text-sm shadow-lg",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "cn";
 import { Button } from "@workspace/ui/components/button";
 import { Bell, Check, CheckCheck, Inbox, X } from "lucide-react";
@@ -48,6 +48,7 @@ export function NotificationBell({
   variant = "header",
 }: NotificationBellProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [open, setOpen] = useState(false);
@@ -114,9 +115,11 @@ export function NotificationBell({
     }
   }, [lang]);
 
+  // The mobile bell lives in the persistent layout, so it must refresh the
+  // badge on navigation instead of only when it first mounts.
   useEffect(() => {
     void loadCount();
-  }, [loadCount]);
+  }, [loadCount, pathname]);
 
   useEffect(() => {
     if (open) void loadNotifications();

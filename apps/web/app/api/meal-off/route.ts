@@ -101,6 +101,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // The board only lists active regular members; reject inactive accounts so
+    // a request can never be invisible to the manager who has to decide it.
+    if (!sessionMember.member.isActive) {
+      return NextResponse.json(
+        { error: "Only active members can request meal off" },
+        { status: 403 }
+      );
+    }
+
     const dhaka = getDhakaDate();
     if (dhaka.month !== month || dhaka.date !== date) {
       return NextResponse.json(

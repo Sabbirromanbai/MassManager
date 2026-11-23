@@ -13,7 +13,8 @@ export async function POST(request: NextRequest) {
 
     const cookieStore = await cookies();
     cookieStore.set("lang", lang, {
-      httpOnly: true,
+      // UI preference: the sign-in/sign-up pages read it client-side.
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 365,

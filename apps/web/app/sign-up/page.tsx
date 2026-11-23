@@ -30,6 +30,15 @@ export default function SignUpPage() {
         setLang(value);
       }
     }
+
+    function handleLangChange(event: Event) {
+      const value = (event as CustomEvent<Lang>).detail;
+      if (value === "bn" || value === "en") {
+        setLang(value);
+      }
+    }
+    window.addEventListener("langchange", handleLangChange);
+    return () => window.removeEventListener("langchange", handleLangChange);
   }, []);
 
   async function handleSubmit(event: React.FormEvent) {

@@ -22,6 +22,9 @@ export function LanguageToggle({ currentLang, className }: LanguageToggleProps) 
       body: JSON.stringify({ lang: nextLang }),
     });
     router.refresh();
+    // Client-only pages (sign-in/sign-up) keep their own language state and
+    // cannot pick up the refreshed server props, so notify them directly.
+    window.dispatchEvent(new CustomEvent<Lang>("langchange", { detail: nextLang }));
   }
 
   return (

@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         _id: existing._id,
         memberId: managerId,
         $expr: {
-          $lte: [
+          $gte: [
             { $subtract: ["$amount", { $sum: "$repayments.amount" }] },
             amount,
           ],
