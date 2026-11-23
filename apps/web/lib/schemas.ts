@@ -93,7 +93,7 @@ export const createMealOffRequestSchema = z.object({
   memberId: z.string().min(1, "Member ID is required"),
   month: monthSchema,
   date: dateSchema,
-  status: z.enum(["pending", "done"]).default("pending"),
+  status: z.literal("pending").default("pending"),
 });
 
 export const createMonthSchema = z.object({
@@ -117,6 +117,11 @@ const isoDateSchema = z
 const objectIdSchema = z
   .string()
   .regex(/^[0-9a-fA-F]{24}$/, "Invalid ID");
+
+export const decideMealOffRequestSchema = z.object({
+  requestId: objectIdSchema,
+  decision: z.enum(["approved", "rejected"], "Decision must be approved or rejected"),
+});
 
 const loanAmountSchema = z
   .number()
@@ -170,6 +175,7 @@ export type CreateAdvanceInput = z.infer<typeof createAdvanceSchema>;
 export type CreateEggEntryInput = z.infer<typeof createEggEntrySchema>;
 export type CreateGuestMealInput = z.infer<typeof createGuestMealSchema>;
 export type CreateMealOffRequestInput = z.infer<typeof createMealOffRequestSchema>;
+export type DecideMealOffRequestInput = z.infer<typeof decideMealOffRequestSchema>;
 export type CreateMonthInput = z.infer<typeof createMonthSchema>;
 export type CreateOfficeLoanInput = z.infer<typeof createOfficeLoanSchema>;
 export type UpdateOfficeLoanInput = z.infer<typeof updateOfficeLoanSchema>;

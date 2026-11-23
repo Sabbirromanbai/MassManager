@@ -76,13 +76,22 @@ export interface GuestMeal {
   createdAt: Date;
 }
 
+export type MealOffRequestStatus = "pending" | "approved" | "rejected";
+export type MealOffDecision = "approved" | "rejected";
+
 export interface MealOffRequest {
   _id?: ObjectId;
   memberId: ObjectId;
   month: string;
   date: number;
-  status: "pending" | "done";
+  /** `done` is kept for records created before explicit approvals existed. */
+  status: MealOffRequestStatus | "done";
+  decision?: MealOffDecision;
+  decidedBy?: ObjectId;
+  decidedByName?: string;
+  decidedAt?: Date;
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 export interface Month {

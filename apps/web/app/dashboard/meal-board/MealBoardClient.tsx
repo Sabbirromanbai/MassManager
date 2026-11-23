@@ -1,17 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "cn";
 import { Button } from "@workspace/ui/components/button";
 import { Lang, t } from "@/lib/lang";
 import { Member } from "@/lib/models";
+import {
+  isMealOffApproved,
+  isMealOffVisible,
+  type MealOffRequestView,
+} from "@/lib/mealOffRequests";
 import {
   EGG_PRICE_PER_PIECE,
   GUEST_RATE_PER_MEAL,
   getWeekdayKey,
   isFriday,
 } from "@/lib/mealBoard";
-import { Plus, Minus, Clock, UtensilsCrossed, Egg, Users } from "lucide-react";
+import {
+  Plus,
+  Minus,
+  Clock,
+  UtensilsCrossed,
+  Egg,
+  Users,
+  Check,
+  X,
+  ShieldCheck,
+} from "lucide-react";
 
 export interface GuestEntry {
   date: number;
@@ -36,12 +51,12 @@ interface MealBoardClientProps {
   guestMembers: Member[];
   mealsMap: Map<string, number>;
   eggMap: Map<string, number>;
-  mealOffMap: Map<string, { status: string; requestId: string }>;
+  mealOffRequests: MealOffRequestView[];
   guestEntries: GuestEntry[];
   days: number[];
   canRequestMealOff: boolean;
   today: number;
-  currentUserMealOff: { status: string; requestId: string } | undefined;
+  currentUserMealOff: MealOffRequestView | undefined;
   dhakaTime: Date;
 }
 
@@ -71,6 +86,23 @@ async function readServerError(
   return fallback;
 }
 
+function formatRequestTime(value: string | null, lang: Lang): string {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return new Intl.DateTimeFormat(lang === "bn" ? "bn-BD" : "en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Dhaka",
+  }).format(parsed);
+}
+
+function mealOffStatusClass(status: MealOffRequestView["status"]): string {
+  if (status === "approved") return "app-icon-emerald";
+  if (status === "rejected") return "app-tint-danger app-text-danger";
+  return "app-tint-warning app-text-warning";
+}
+
 export function MealBoardClient({
   lang,
   month,
@@ -81,7 +113,7 @@ export function MealBoardClient({
   guestMembers,
   mealsMap,
   eggMap,
-  mealOffMap,
+  mealOffRequests,
   guestEntries,
   days,
   canRequestMealOff,
@@ -111,6 +143,17 @@ export function MealBoardClient({
   const [eggError, setEggError] = useState<string>("");
   const [guestError, setGuestError] = useState<string>("");
 
+  const [mealOffRequestItems, setMealOffRequestItems] =
+    useState<MealOffRequestView[]>(mealOffRequests);
+  const [mealOffFilter, setMealOffFilter] = useState<"pending" | "all">(
+    "pending"
+  );
+  const [decidingRequestId, setDecidingRequestId] = useState<string | null>(
+    null
+  );
+  const [mealOffError, setMealOffError] = useState<string>("");
+  const [mealOffNotice, setMealOffNotice] = useState<string>("");
+
   const sortedRegularMembers = [...regularMembers].sort((a, b) =>
     a.name.localeCompare(b.name)
   );
@@ -125,6 +168,29 @@ export function MealBoardClient({
   );
   const eggMember = sortedEggMembers[0];
   const guestMember = sortedGuestMembers[0];
+
+  const mealOffMap = useMemo(() => {
+    const map = new Map<string, MealOffRequestView>();
+    mealOffRequestItems.forEach((request) => {
+      map.set(`${request.memberId}-${request.date}`, request);
+    });
+    return map;
+  }, [mealOffRequestItems]);
+
+  const pendingMealOffCount = mealOffRequestItems.filter(
+    (request) => request.status === "pending"
+  ).length;
+
+  const visibleMealOffRequests = useMemo(() => {
+    const sorted = [...mealOffRequestItems].sort((a, b) => {
+      if (a.status === "pending" && b.status !== "pending") return -1;
+      if (a.status !== "pending" && b.status === "pending") return 1;
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+    return mealOffFilter === "pending"
+      ? sorted.filter((request) => request.status === "pending")
+      : sorted;
+  }, [mealOffFilter, mealOffRequestItems]);
 
   // Reflect the stored daily count when a member/date is selected so changing
   // an existing entry starts from its current value (including 0 and 3).
@@ -428,6 +494,68 @@ export function MealBoardClient({
       setError(t(lang, "pages.mealBoard.mealOffTimeOver"));
     } finally {
       setRequestingMealOff(false);
+    }
+  }
+
+  async function handleMealOffDecision(
+    requestId: string,
+    decision: "approved" | "rejected"
+  ) {
+    setDecidingRequestId(requestId);
+    setMealOffError("");
+    setMealOffNotice("");
+
+    try {
+      const response = await fetch("/api/meal-off", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId, decision }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          await readServerError(
+            response,
+            t(
+              lang,
+              decision === "approved"
+                ? "pages.mealBoard.errorApprove"
+                : "pages.mealBoard.errorReject"
+            )
+          )
+        );
+      }
+
+      const data: unknown = await response.json();
+      const updated =
+        typeof data === "object" && data !== null && "request" in data
+          ? (data as { request?: MealOffRequestView }).request
+          : undefined;
+
+      if (updated?.id) {
+        setMealOffRequestItems((previous) =>
+          previous.map((request) =>
+            request.id === updated.id ? updated : request
+          )
+        );
+      }
+
+      setMealOffNotice(
+        t(
+          lang,
+          decision === "approved"
+            ? "pages.mealBoard.approvedNotice"
+            : "pages.mealBoard.rejectedNotice"
+        )
+      );
+    } catch (caught) {
+      setMealOffError(
+        caught instanceof Error && caught.message
+          ? caught.message
+          : t(lang, "pages.mealBoard.errorDecision")
+      );
+    } finally {
+      setDecidingRequestId(null);
     }
   }
 
@@ -841,15 +969,24 @@ export function MealBoardClient({
                       const key = `${memberId}-${day}`;
                       const count = mealsMap.get(key);
                       const mealOff = mealOffMap.get(key) ?? null;
-                      const isOff =
-                        mealOff?.status === "pending" ||
-                        mealOff?.status === "done";
+                      const isOff = mealOff
+                        ? isMealOffVisible(mealOff.status)
+                        : false;
 
                       return (
                         <td key={day} className="relative p-2 text-center">
                           {isOff ? (
-                            <span className="text-xs app-text-warning">
-                              {mealOff?.status === "done" ? "✓" : "○"}
+                            <span
+                              className={cn(
+                                "text-xs",
+                                mealOff && isMealOffApproved(mealOff.status)
+                                  ? "app-text-emerald"
+                                  : "app-text-warning"
+                              )}
+                            >
+                              {mealOff && isMealOffApproved(mealOff.status)
+                                ? "✓"
+                                : "○"}
                             </span>
                           ) : (
                             <span
@@ -1032,70 +1169,191 @@ export function MealBoardClient({
         </section>
       )}
 
-      {mealOffMap.size > 0 && isManager && (
+      {isManager && (
         <section className={cn(cardClass, "animate-fade-in-up delay-3")}>
-          <h3 className="mb-3 text-base font-semibold app-text sm:text-lg">
-            {t(lang, "pages.mealBoard.mealOffRequestsList")}
-          </h3>
-          <div className="space-y-2">
-            {Array.from(mealOffMap.entries()).map(([key, value]) => {
-              const [memberId, dateStr] = key.split("-");
-              const member = regularMembers.find(
-                (m) => m._id?.toString() === memberId
-              );
-              return (
-                <div
-                  key={key}
-                  className="glass flex flex-col gap-2 rounded-lg p-3 transition-colors hover:app-surface-strong sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-8 items-center justify-center rounded-full app-tint-emerald">
-                      <span className="text-sm font-medium app-text-emerald">
-                        {member?.name?.charAt(0) ?? "?"}
-                      </span>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className={cn(iconWrapBase, "app-icon-emerald")}>
+                <ShieldCheck className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base font-semibold app-text sm:text-lg">
+                  {t(lang, "pages.mealBoard.mealOffRequestsList")}
+                </h3>
+                <p className="text-xs app-text-faint">
+                  {t(lang, "pages.mealBoard.pendingCount").replace(
+                    "{count}",
+                    String(pendingMealOffCount)
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div
+              role="group"
+              aria-label={t(lang, "pages.mealBoard.mealOffRequestsList")}
+              className="inline-flex w-fit rounded-lg border app-border app-inset p-1"
+            >
+              <button
+                type="button"
+                aria-pressed={mealOffFilter === "pending"}
+                onClick={() => setMealOffFilter("pending")}
+                className={cn(
+                  "app-button-motion rounded-md px-3 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70",
+                  mealOffFilter === "pending"
+                    ? "app-primary-button"
+                    : "app-text-muted hover:app-surface-strong hover:app-text"
+                )}
+              >
+                {t(lang, "pages.mealBoard.pendingOnly")}
+              </button>
+              <button
+                type="button"
+                aria-pressed={mealOffFilter === "all"}
+                onClick={() => setMealOffFilter("all")}
+                className={cn(
+                  "app-button-motion rounded-md px-3 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70",
+                  mealOffFilter === "all"
+                    ? "app-primary-button"
+                    : "app-text-muted hover:app-surface-strong hover:app-text"
+                )}
+              >
+                {t(lang, "pages.mealBoard.allRequests")}
+              </button>
+            </div>
+          </div>
+
+          {mealOffError && (
+            <p
+              role="alert"
+              aria-live="assertive"
+              className="mb-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm app-text-danger"
+            >
+              {mealOffError}
+            </p>
+          )}
+          {mealOffNotice && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm app-text-emerald"
+            >
+              {mealOffNotice}
+            </p>
+          )}
+
+          {visibleMealOffRequests.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 rounded-xl border app-border app-surface px-4 py-10 text-center">
+              <div className="flex size-11 items-center justify-center rounded-xl app-icon-emerald">
+                <ShieldCheck className="size-5" />
+              </div>
+              <p className="text-sm font-medium app-text">
+                {t(
+                  lang,
+                  mealOffFilter === "pending"
+                    ? "pages.mealBoard.noPendingRequests"
+                    : "pages.mealBoard.noRequests"
+                )}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {visibleMealOffRequests.map((request) => {
+                const member = regularMembers.find(
+                  (m) => m._id?.toString() === request.memberId
+                );
+                const isDeciding = decidingRequestId === request.id;
+
+                return (
+                  <div
+                    key={request.id}
+                    className="glass flex flex-col gap-3 rounded-xl border app-border p-3 transition-colors hover:app-surface-strong md:flex-row md:items-center md:justify-between"
+                  >
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl app-icon-emerald">
+                        <span className="text-sm font-medium app-text-emerald">
+                          {member?.name?.charAt(0) ?? "?"}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium app-text">
+                            {member?.name ??
+                              t(lang, "pages.mealBoard.unknownMember")}
+                          </p>
+                          <span
+                            className={cn(
+                              "rounded px-2 py-0.5 text-[11px] font-medium",
+                              mealOffStatusClass(request.status)
+                            )}
+                          >
+                            {t(lang, `pages.mealBoard.${request.status}`)}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs app-text-muted">
+                          {t(lang, "pages.mealBoard.date")} {request.date} ·{" "}
+                          {request.month}
+                        </p>
+                        <p className="mt-0.5 text-[11px] app-text-faint">
+                          {t(lang, "pages.mealBoard.requestedAt")}:{" "}
+                          {formatRequestTime(request.createdAt, lang)}
+                        </p>
+                        {request.status !== "pending" && (
+                          <p className="mt-0.5 text-[11px] app-text-faint">
+                            {t(lang, "pages.mealBoard.decidedAt")}:{" "}
+                            {formatRequestTime(request.decidedAt, lang)}
+                            {request.decidedByName
+                              ? ` · ${t(lang, "pages.mealBoard.decidedBy")}: ${request.decidedByName}`
+                              : ""}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium app-text">
-                        {member?.name ?? "Unknown"}
-                      </p>
-                      <p className="text-xs app-text-muted">
-                        {t(lang, "pages.mealBoard.date")} {dateStr}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "rounded px-2 py-1 text-xs font-medium",
-                        value.status === "pending"
-                          ? "app-tint-warning app-text-warning"
-                          : "app-icon-emerald"
-                      )}
-                    >
-                      {t(lang, `pages.mealBoard.${value.status}`)}
-                    </span>
-                    {value.status === "pending" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="glass"
-                        onClick={async () => {
-                          const res = await fetch("/api/meal-off", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ requestId: value.requestId }),
-                          });
-                          if (res.ok) window.location.reload();
-                        }}
-                      >
-                        {t(lang, "pages.mealBoard.markDone")}
-                      </Button>
+
+                    {request.status === "pending" ? (
+                      <div className="flex shrink-0 gap-2 md:justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="glass app-text-danger transition-colors hover:bg-red-500/10"
+                          onClick={() =>
+                            void handleMealOffDecision(request.id, "rejected")
+                          }
+                          disabled={isDeciding}
+                        >
+                          {isDeciding ? (
+                            <span className="app-spinner" aria-hidden="true" />
+                          ) : (
+                            <X className="size-4" />
+                          )}
+                          {t(lang, "pages.mealBoard.reject")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="app-primary-button"
+                          onClick={() =>
+                            void handleMealOffDecision(request.id, "approved")
+                          }
+                          disabled={isDeciding}
+                        >
+                          {isDeciding ? (
+                            <span className="app-spinner" aria-hidden="true" />
+                          ) : (
+                            <Check className="size-4" />
+                          )}
+                          {t(lang, "pages.mealBoard.approve")}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="shrink-0 text-xs app-text-muted md:text-right">
+                        {formatRequestTime(request.decidedAt, lang)}
+                      </div>
                     )}
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
 
@@ -1104,27 +1362,46 @@ export function MealBoardClient({
           <h3 className="mb-3 text-base font-semibold app-text sm:text-lg">
             {t(lang, "pages.mealBoard.mealOffRequest")}
           </h3>
+          {error && (
+            <p
+              role="alert"
+              aria-live="assertive"
+              className="mb-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm app-text-danger"
+            >
+              {error}
+            </p>
+          )}
           {currentUserMealOff ? (
-            <div className="glass flex items-center justify-between rounded-lg p-3">
+            <div className="glass flex flex-col gap-3 rounded-lg p-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <Clock className="size-5 app-text-warning" />
+                <Clock
+                  className={cn(
+                    "size-5",
+                    currentUserMealOff.status === "approved"
+                      ? "app-text-emerald"
+                      : currentUserMealOff.status === "rejected"
+                        ? "app-text-danger"
+                        : "app-text-warning"
+                  )}
+                />
                 <div>
                   <p className="font-medium app-text">
                     {t(lang, "pages.mealBoard.mealOffRequested")}
                   </p>
                   <p className="text-xs app-text-muted">
-                    {currentUserMealOff.status === "done"
-                      ? t(lang, "pages.mealBoard.done")
-                      : t(lang, "pages.mealBoard.pending")}
+                    {t(lang, `pages.mealBoard.${currentUserMealOff.status}`)} ·{" "}
+                    {formatRequestTime(
+                      currentUserMealOff.decidedAt ??
+                        currentUserMealOff.createdAt,
+                      lang
+                    )}
                   </p>
                 </div>
               </div>
               <span
                 className={cn(
                   "rounded px-2 py-1 text-xs font-medium",
-                  currentUserMealOff.status === "pending"
-                    ? "app-tint-warning app-text-warning"
-                    : "app-icon-emerald"
+                  mealOffStatusClass(currentUserMealOff.status)
                 )}
               >
                 {t(lang, `pages.mealBoard.${currentUserMealOff.status}`)}

@@ -7,7 +7,11 @@ import { getOrLinkMember, isCurrentManagerMember } from "@/lib/currentMember";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { MealBoardClient } from "./MealBoardClient";
 import { Lang, t } from "@/lib/lang";
-import { EggEntry, GuestMeal, Member } from "@/lib/models";
+import { EggEntry, GuestMeal, MealOffRequest, Member } from "@/lib/models";
+import {
+  type MealOffRequestView,
+  serializeMealOffRequest,
+} from "@/lib/mealOffRequests";
 import { UtensilsCrossed } from "lucide-react";
 
 interface MealBoardPageProps {
@@ -51,7 +55,7 @@ export default async function MealBoardPage({ searchParams }: MealBoardPageProps
   const members = db.collection("members");
   const meals = db.collection("meals");
   const eggEntries = db.collection("eggEntries");
-  const mealOffRequests = db.collection("mealOffRequests");
+  const mealOffRequestCollection = db.collection("mealOffRequests");
   const guestMeals = db.collection("guestMeals");
 
   const allMembers = await members
@@ -78,9 +82,10 @@ export default async function MealBoardPage({ searchParams }: MealBoardPageProps
     eggEntries
       .find({ month, memberId: { $in: eggMemberObjectIds } })
       .toArray() as Promise<EggEntry[]>,
-    mealOffRequests
+    mealOffRequestCollection
       .find({ month, memberId: { $in: memberObjectIds } })
-      .toArray() as Promise<{ memberId: ObjectId; date: number; status: string; _id: ObjectId }[]>,
+      .sort({ createdAt: -1 })
+      .toArray() as Promise<MealOffRequest[]>,
     guestMeals
       .find({ month })
       .sort({ date: 1 })
@@ -99,10 +104,12 @@ export default async function MealBoardPage({ searchParams }: MealBoardPageProps
     eggMap.set(key, (eggMap.get(key) ?? 0) + egg.pieces);
   });
 
-  const mealOffMap = new Map<string, { status: string; requestId: string }>();
-  mealOffRequestsData.forEach((req) => {
-    const key = `${req.memberId.toString()}-${req.date}`;
-    mealOffMap.set(key, { status: req.status, requestId: req._id.toString() });
+  const mealOffRequests: MealOffRequestView[] = mealOffRequestsData.map(
+    serializeMealOffRequest
+  );
+  const mealOffMap = new Map<string, MealOffRequestView>();
+  mealOffRequests.forEach((request) => {
+    mealOffMap.set(`${request.memberId}-${request.date}`, request);
   });
 
   const guestEntries = guestMealsData.map((entry) => ({
@@ -117,7 +124,6 @@ export default async function MealBoardPage({ searchParams }: MealBoardPageProps
   const daysInMonth = new Date(parseInt(yearStr), parseInt(monthStr), 0).getDate();
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  const currentUserMealOff = mealOffMap.get(`${(member._id?.toString() as string) || ""}-${new Date().getDate()}`);
   const dhakaNow = new Date();
   const dhakaOffset = 6 * 60;
   const utc = dhakaNow.getTime() + dhakaNow.getTimezoneOffset() * 60000;
@@ -129,6 +135,9 @@ export default async function MealBoardPage({ searchParams }: MealBoardPageProps
   const yearStr2 = parts2[0] ?? "";
   const monthStr2 = parts2[1] ?? "";
   const canRequestMealOff = !isAfter10AM && currentMonth === month && today <= new Date(parseInt(yearStr2), parseInt(monthStr2), 0).getDate();
+  const currentUserMealOff = mealOffMap.get(
+    `${member._id?.toString() ?? ""}-${today}`
+  );
 
   return (
     <div className="space-y-6">
@@ -151,7 +160,7 @@ export default async function MealBoardPage({ searchParams }: MealBoardPageProps
         guestMembers={guestMembers.map(toClientMember)}
         mealsMap={mealsMap}
         eggMap={eggMap}
-        mealOffMap={mealOffMap}
+        mealOffRequests={mealOffRequests}
         guestEntries={guestEntries}
         days={days}
         canRequestMealOff={canRequestMealOff}

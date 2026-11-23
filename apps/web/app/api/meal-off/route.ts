@@ -4,20 +4,17 @@ import { getDb } from "@/lib/db";
 import { ObjectId } from "mongodb";
 import { auth } from "@/lib/auth";
 import { getOrLinkMember, isCurrentManagerMember } from "@/lib/currentMember";
-import { z } from "zod";
-import { Member } from "@/lib/models";
+import {
+  createMealOffRequestSchema,
+  decideMealOffRequestSchema,
+} from "@/lib/schemas";
+import { COLLECTIONS, Member, MealOffRequest } from "@/lib/models";
+import { serializeMealOffRequest } from "@/lib/mealOffRequests";
 
-const mealOffRequestSchema = z.object({
-  memberId: z.string().min(1),
-  month: z.string().regex(/^\d{4}-\d{2}$/),
-  date: z.number().int().min(1).max(31),
-});
-
-const updateMealOffSchema = z.object({
-  requestId: z.string().min(1),
-});
-
-async function getSessionMember(): Promise<{ user: { id: string; name: string; email: string } | null; member: Member | null }> {
+async function getSessionMember(): Promise<{
+  user: { id: string; name: string; email: string } | null;
+  member: Member | null;
+}> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return { user: null, member: null };
 
@@ -28,7 +25,10 @@ async function getSessionMember(): Promise<{ user: { id: string; name: string; e
     email: user.email ?? "",
   });
 
-  return { user: { id: user.id, name: user.name, email: user.email ?? "" }, member };
+  return {
+    user: { id: user.id, name: user.name, email: user.email ?? "" },
+    member,
+  };
 }
 
 function getDhakaDate(): { month: string; date: number; hours: number } {
@@ -53,32 +53,54 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const validation = mealOffRequestSchema.safeParse(body);
+    const validation = createMealOffRequestSchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json({ error: validation.error.issues[0]?.message || "Invalid request" }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: validation.error.issues[0]?.message || "Invalid request",
+        },
+        { status: 400 }
+      );
     }
 
     const { memberId, month, date } = validation.data;
 
-    if (!sessionMember.member._id || memberId !== sessionMember.member._id!.toString()) {
-      return NextResponse.json({ error: "Can only request meal off for yourself" }, { status: 403 });
+    if (
+      !sessionMember.member._id ||
+      memberId !== sessionMember.member._id.toString()
+    ) {
+      return NextResponse.json(
+        { error: "Can only request meal off for yourself" },
+        { status: 403 }
+      );
     }
 
     if (sessionMember.member.type !== "regular") {
-      return NextResponse.json({ error: "Only regular members can request meal off" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Only regular members can request meal off" },
+        { status: 400 }
+      );
     }
 
     const dhaka = getDhakaDate();
     if (dhaka.month !== month || dhaka.date !== date) {
-      return NextResponse.json({ error: "Can only request meal off for today" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Can only request meal off for today" },
+        { status: 400 }
+      );
     }
 
     if (dhaka.hours >= 10) {
-      return NextResponse.json({ error: "Time over, cannot request after 10:00 AM" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Time over, cannot request after 10:00 AM" },
+        { status: 400 }
+      );
     }
 
     const db = await getDb();
-    const mealOffRequests = db.collection("mealOffRequests");
+    const mealOffRequests = db.collection<MealOffRequest>(
+      COLLECTIONS.mealOffRequests
+    );
 
     const existing = await mealOffRequests.findOne({
       memberId: new ObjectId(memberId),
@@ -87,7 +109,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (existing) {
-      return NextResponse.json({ error: "Already requested meal off for this date" }, { status: 409 });
+      return NextResponse.json(
+        { error: "Already requested meal off for this date" },
+        { status: 409 }
+      );
     }
 
     const result = await mealOffRequests.insertOne({
@@ -99,14 +124,19 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, id: result.insertedId.toString() });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message || "Invalid request" }, { status: 400 });
-    }
-    return NextResponse.json({ error: "Failed to request meal off" }, { status: 500 });
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to request meal off" },
+      { status: 500 }
+    );
   }
 }
 
+/**
+ * Manager-only decision endpoint. The `status: "pending"` filter makes the
+ * transition atomic: a second approve/reject attempt cannot overwrite the
+ * first decision.
+ */
 export async function PATCH(request: NextRequest) {
   try {
     const sessionMember = await getSessionMember();
@@ -114,33 +144,81 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isManager = isCurrentManagerMember(sessionMember.member);
-    if (!isManager) {
-      return NextResponse.json({ error: "Only managers can update meal off requests" }, { status: 403 });
+    if (!isCurrentManagerMember(sessionMember.member)) {
+      return NextResponse.json(
+        { error: "Only the current manager can decide meal off requests" },
+        { status: 403 }
+      );
+    }
+
+    if (!sessionMember.member._id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
-    const validation = updateMealOffSchema.safeParse(body);
+    const validation = decideMealOffRequestSchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json({ error: validation.error.issues[0]?.message || "Invalid request" }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: validation.error.issues[0]?.message || "Invalid request",
+        },
+        { status: 400 }
+      );
     }
 
-    const { requestId } = validation.data;
+    const { requestId, decision } = validation.data;
+    const objectId = new ObjectId(requestId);
+    const decidedAt = new Date();
 
     const db = await getDb();
-    const mealOffRequests = db.collection("mealOffRequests");
+    const mealOffRequests = db.collection<MealOffRequest>(
+      COLLECTIONS.mealOffRequests
+    );
 
     const result = await mealOffRequests.updateOne(
-      { _id: new ObjectId(requestId) },
-      { $set: { status: "done", updatedAt: new Date() } }
+      { _id: objectId, status: "pending" },
+      {
+        $set: {
+          status: decision,
+          decision,
+          decidedBy: new ObjectId(sessionMember.member._id.toString()),
+          decidedByName: sessionMember.member.name,
+          decidedAt,
+          updatedAt: decidedAt,
+        },
+      }
     );
 
     if (result.matchedCount === 0) {
-      return NextResponse.json({ error: "Request not found" }, { status: 404 });
+      const existing = await mealOffRequests.findOne({ _id: objectId });
+      if (!existing) {
+        return NextResponse.json(
+          { error: "Meal off request not found" },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json(
+        { error: "Meal off request has already been decided" },
+        { status: 409 }
+      );
     }
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to update meal off request" }, { status: 500 });
+    const updated = await mealOffRequests.findOne({ _id: objectId });
+    if (!updated) {
+      return NextResponse.json(
+        { error: "Meal off request not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      request: serializeMealOffRequest(updated),
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to update meal off request" },
+      { status: 500 }
+    );
   }
 }
