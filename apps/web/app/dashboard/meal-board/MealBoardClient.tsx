@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "cn";
 import { Button } from "@workspace/ui/components/button";
 import { Lang, t } from "@/lib/lang";
@@ -34,12 +35,8 @@ export interface GuestEntry {
   ratePerMeal: number;
 }
 
-type MealCount = 0 | 1 | 2 | 3;
-const MEAL_COUNTS: readonly MealCount[] = [0, 1, 2, 3];
-
-function toMealCount(value: number | undefined): MealCount {
-  return value === 0 || value === 1 || value === 2 || value === 3 ? value : 2;
-}
+type MealCount = 1 | 2;
+const MEAL_COUNTS: readonly MealCount[] = [1, 2];
 
 interface MealBoardClientProps {
   lang: Lang;
@@ -121,12 +118,15 @@ export function MealBoardClient({
   currentUserMealOff,
 }: MealBoardClientProps) {
   const initialDay = days.includes(today) ? today : days[0] ?? 1;
+  const router = useRouter();
 
-  const [selectedMemberId, setSelectedMemberId] = useState<string>("");
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [removeMemberId, setRemoveMemberId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>(String(initialDay));
   const [mealCount, setMealCount] = useState<MealCount>(2);
   const [isAdding, setIsAdding] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [mealResult, setMealResult] = useState<string>("");
 
   const [eggDate, setEggDate] = useState<string>(String(initialDay));
   const [eggPieces, setEggPieces] = useState<string>("1");
@@ -157,9 +157,9 @@ export function MealBoardClient({
   const sortedRegularMembers = [...regularMembers].sort((a, b) =>
     a.name.localeCompare(b.name)
   );
-  const selectedMemberName = sortedRegularMembers.find(
-    (member) => member._id?.toString() === selectedMemberId
-  )?.name;
+  const allMembersSelected =
+    sortedRegularMembers.length > 0 &&
+    selectedMemberIds.length === sortedRegularMembers.length;
   const sortedEggMembers = [...eggOnlyMembers].sort((a, b) =>
     a.name.localeCompare(b.name)
   );
@@ -192,13 +192,6 @@ export function MealBoardClient({
       : sorted;
   }, [mealOffFilter, mealOffRequestItems]);
 
-  // Reflect the stored daily count when a member/date is selected so changing
-  // an existing entry starts from its current value (including 0 and 3).
-  useEffect(() => {
-    if (!selectedMemberId) return;
-    setMealCount(toMealCount(mealsMap.get(`${selectedMemberId}-${selectedDate}`)));
-  }, [selectedMemberId, selectedDate, mealsMap]);
-
   const weekdayShort = (day: number): string => {
     const key = getWeekdayKey(day, month);
     return key ? t(lang, `weekdays.${key}`) : "";
@@ -220,22 +213,38 @@ export function MealBoardClient({
     0
   );
 
+  function toggleMemberSelection(memberId: string) {
+    setSelectedMemberIds((previous) =>
+      previous.includes(memberId)
+        ? previous.filter((id) => id !== memberId)
+        : [...previous, memberId]
+    );
+  }
+
+  function selectAllMembers() {
+    setSelectedMemberIds(
+      sortedRegularMembers.map((member) => member._id!.toString())
+    );
+  }
+
   async function handleAddMeal() {
     const date = Number.parseInt(selectedDate, 10);
-    if (!selectedMemberId || !Number.isInteger(date)) {
-      setError(t(lang, "pages.mealBoard.errorNotManager"));
+    if (selectedMemberIds.length === 0 || !Number.isInteger(date)) {
+      setError(t(lang, "pages.mealBoard.errorSelectMember"));
+      setMealResult("");
       return;
     }
 
     setIsAdding(true);
     setError("");
+    setMealResult("");
 
     try {
       const response = await fetch("/api/meals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          memberId: selectedMemberId,
+          memberIds: selectedMemberIds,
           month,
           date,
           count: mealCount,
@@ -243,17 +252,35 @@ export function MealBoardClient({
       });
 
       if (!response.ok) {
-        setError(
+        throw new Error(
           await readServerError(
             response,
             t(lang, "pages.mealBoard.errorNotManager")
           )
         );
-        return;
       }
-      window.location.reload();
-    } catch {
-      setError(t(lang, "pages.mealBoard.errorNotManager"));
+
+      const data: unknown = await response.json();
+      const payload =
+        typeof data === "object" && data !== null
+          ? (data as { added?: unknown; skipped?: unknown })
+          : null;
+      const added = typeof payload?.added === "number" ? payload.added : 0;
+      const skipped = typeof payload?.skipped === "number" ? payload.skipped : 0;
+
+      setMealResult(
+        t(lang, "pages.mealBoard.mealAddResult")
+          .replace("{added}", String(added))
+          .replace("{skipped}", String(skipped))
+      );
+      // Re-fetch the server component so every new cell appears immediately.
+      router.refresh();
+    } catch (caught) {
+      setError(
+        caught instanceof Error && caught.message
+          ? caught.message
+          : t(lang, "pages.mealBoard.errorNotManager")
+      );
     } finally {
       setIsAdding(false);
     }
@@ -261,8 +288,8 @@ export function MealBoardClient({
 
   async function handleRemoveMeal() {
     const date = Number.parseInt(selectedDate, 10);
-    if (!selectedMemberId || !Number.isInteger(date)) {
-      setError(t(lang, "pages.mealBoard.errorNotManager"));
+    if (!removeMemberId || !Number.isInteger(date)) {
+      setError(t(lang, "pages.mealBoard.errorSelectMember"));
       return;
     }
 
@@ -274,7 +301,7 @@ export function MealBoardClient({
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          memberId: selectedMemberId,
+          memberId: removeMemberId,
           month,
           date,
         }),
@@ -572,36 +599,70 @@ export function MealBoardClient({
                 {t(lang, "pages.mealBoard.addMeal")}
               </h3>
               <p className="text-xs app-text-faint">
-                {t(lang, "pages.mealBoard.mealEntryHint")}
+                {t(lang, "pages.mealBoard.mealEntryHintMulti")}
               </p>
             </div>
           </div>
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-            <div className="min-w-0 flex-1 lg:min-w-[200px]">
-              <label htmlFor="meal-member" className={labelClass}>
-                {t(lang, "pages.mealBoard.memberDropdownLabel")}
-              </label>
-              <select
-                id="meal-member"
-                value={selectedMemberId}
-                onChange={(event) => setSelectedMemberId(event.target.value)}
-                className={fieldClass}
-                disabled={isAdding || isRemoving}
-              >
-                <option value="" disabled>
-                  {t(lang, "pages.mealBoard.memberDropdownLabel")}
-                </option>
-                {sortedRegularMembers.map((member) => (
-                  <option
-                    key={member._id?.toString()}
-                    value={member._id!.toString()}
+            <fieldset
+              aria-label={t(lang, "pages.mealBoard.membersLabel")}
+              disabled={isAdding || isRemoving}
+              className="min-w-0 flex-1 rounded-lg border app-border p-2 lg:min-w-[240px]"
+            >
+              <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-medium uppercase tracking-wide app-text-muted">
+                  {t(lang, "pages.mealBoard.membersLabel")}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={selectAllMembers}
+                    disabled={allMembersSelected}
+                    className="rounded-md px-1.5 py-0.5 text-xs font-semibold app-text-emerald transition-colors hover:app-surface-strong disabled:opacity-40"
                   >
-                    {member.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+                    {t(lang, "pages.mealBoard.selectAll")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMemberIds([])}
+                    disabled={selectedMemberIds.length === 0}
+                    className="rounded-md px-1.5 py-0.5 text-xs font-semibold app-text-muted transition-colors hover:app-surface-strong disabled:opacity-40"
+                  >
+                    {t(lang, "pages.mealBoard.clearSelection")}
+                  </button>
+                </div>
+              </div>
+              <div className="grid max-h-44 grid-cols-1 gap-0.5 overflow-y-auto sm:grid-cols-2">
+                {sortedRegularMembers.map((member) => {
+                  const memberId = member._id!.toString();
+                  const checked = selectedMemberIds.includes(memberId);
+                  return (
+                    <label
+                      key={memberId}
+                      className={cn(
+                        "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:app-surface-strong",
+                        checked ? "app-text-emerald" : "app-text"
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleMemberSelection(memberId)}
+                        className="size-4 shrink-0 accent-emerald-500"
+                      />
+                      <span className="truncate">{member.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="mt-1 px-2 text-[11px] app-text-faint">
+                {t(lang, "pages.mealBoard.selectedCount").replace(
+                  "{count}",
+                  String(selectedMemberIds.length)
+                )}
+              </p>
+            </fieldset>
 
             <div className="min-w-0 flex-1 lg:min-w-[170px]">
               <label htmlFor="meal-date" className={labelClass}>
@@ -654,7 +715,7 @@ export function MealBoardClient({
               <Button
                 className="app-primary-button flex-1 sm:flex-none"
                 onClick={handleAddMeal}
-                disabled={isAdding}
+                disabled={isAdding || isRemoving || selectedMemberIds.length === 0}
               >
                 {isAdding ? (
                   <span className="app-spinner" aria-hidden="true" />
@@ -665,28 +726,59 @@ export function MealBoardClient({
                   {isAdding ? "..." : t(lang, "pages.mealBoard.addButton")}
                 </span>
               </Button>
-              <Button
-                variant="destructive"
-                className="glass flex-1 border-red-600/30 bg-red-600/20 transition-colors hover:bg-red-600/30 sm:flex-none"
-                onClick={handleRemoveMeal}
-                disabled={isRemoving}
-              >
-                {isRemoving ? (
-                  <span className="app-spinner" aria-hidden="true" />
-                ) : (
-                  <Minus className="size-4" />
-                )}
-                <span>
-                  {isRemoving ? "..." : t(lang, "pages.mealBoard.removeButton")}
-                </span>
-              </Button>
             </div>
           </div>
 
-          {selectedMemberName && selectedDate && (
-            <p className="mt-3 break-words rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm app-text-emerald">
-              {selectedMemberName} · {dateOptionLabel(Number.parseInt(selectedDate, 10))} · {mealCount}{" "}
-              {t(lang, "pages.mealBoard.mealsUnit")}
+          {/* Removal is kept as a separate single-member flow (same DELETE API). */}
+          <div className="mt-3 flex flex-col gap-2 border-t app-border pt-3 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1 sm:max-w-xs">
+              <label htmlFor="meal-remove-member" className={labelClass}>
+                {t(lang, "pages.mealBoard.removeMemberLabel")}
+              </label>
+              <select
+                id="meal-remove-member"
+                value={removeMemberId}
+                onChange={(event) => setRemoveMemberId(event.target.value)}
+                className={fieldClass}
+                disabled={isAdding || isRemoving}
+              >
+                <option value="" disabled>
+                  {t(lang, "pages.mealBoard.removeMemberLabel")}
+                </option>
+                {sortedRegularMembers.map((member) => (
+                  <option
+                    key={member._id?.toString()}
+                    value={member._id!.toString()}
+                  >
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button
+              variant="destructive"
+              className="glass border-red-600/30 bg-red-600/20 transition-colors hover:bg-red-600/30"
+              onClick={handleRemoveMeal}
+              disabled={isRemoving || isAdding || !removeMemberId}
+            >
+              {isRemoving ? (
+                <span className="app-spinner" aria-hidden="true" />
+              ) : (
+                <Minus className="size-4" />
+              )}
+              <span>
+                {isRemoving ? "..." : t(lang, "pages.mealBoard.removeButton")}
+              </span>
+            </Button>
+          </div>
+
+          {mealResult && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="mt-3 break-words rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm app-text-emerald"
+            >
+              {mealResult}
             </p>
           )}
 

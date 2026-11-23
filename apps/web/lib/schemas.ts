@@ -127,6 +127,14 @@ export const markNotificationReadSchema = z.object({
   id: objectIdSchema,
 });
 
+/** Batch meal entry: one date and count applied to every selected member. */
+export const createMealsSchema = z.object({
+  memberIds: z.array(objectIdSchema).min(1, "Select at least one member"),
+  month: monthSchema,
+  date: dateSchema,
+  count: z.union([z.literal(1), z.literal(2)]),
+});
+
 const loanAmountSchema = z
   .number()
   .refine(Number.isFinite, "Amount must be a finite number")
@@ -174,6 +182,7 @@ export const deleteOfficeLoanRepaymentSchema = z.object({
 
 export type CreateMemberInput = z.infer<typeof createMemberSchema>;
 export type CreateMealInput = z.infer<typeof createMealSchema>;
+export type CreateMealsInput = z.infer<typeof createMealsSchema>;
 export type CreateBazarEntryInput = z.infer<typeof createBazarEntrySchema>;
 export type CreateAdvanceInput = z.infer<typeof createAdvanceSchema>;
 export type CreateEggEntryInput = z.infer<typeof createEggEntrySchema>;

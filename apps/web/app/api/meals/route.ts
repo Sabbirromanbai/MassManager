@@ -4,9 +4,8 @@ import { getDb } from "@/lib/db";
 import { ObjectId } from "mongodb";
 import { auth } from "@/lib/auth";
 import { getOrLinkMember, isCurrentManagerMember } from "@/lib/currentMember";
-import { createMealSchema } from "@/lib/schemas";
-import { z } from "zod";
-import { Member } from "@/lib/models";
+import { createMealsSchema } from "@/lib/schemas";
+import { Member, Meal } from "@/lib/models";
 
 async function getSessionMember(): Promise<{ user: { id: string; name: string; email: string } | null; member: Member | null }> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -34,51 +33,67 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only managers can add meals" }, { status: 403 });
     }
 
-    const body = await request.json();
-    const validation = createMealSchema.safeParse(body);
-    if (!validation.success) {
-      return NextResponse.json({ error: validation.error.issues[0]?.message || "Invalid request" }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const { memberId, month, date, count } = validation.data;
+    const validation = createMealsSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error.issues[0]?.message ?? "Invalid request" }, { status: 400 });
+    }
+
+    const { month, date, count } = validation.data;
+    const memberIds = [...new Set(validation.data.memberIds)];
+    const objectIds = memberIds.map((id) => new ObjectId(id));
 
     const db = await getDb();
-    const meals = db.collection("meals");
-    const members = db.collection("members");
+    const meals = db.collection<Meal>("meals");
+    const members = db.collection<Member>("members");
 
-    const targetMember = await members.findOne({ _id: new ObjectId(memberId) });
-    if (!targetMember) {
+    const found = await members
+      .find({ _id: { $in: objectIds } }, { projection: { type: 1 } })
+      .toArray();
+    const foundById = new Map(found.map((member) => [member._id!.toString(), member]));
+
+    if (memberIds.some((id) => !foundById.has(id))) {
       return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
-    if (targetMember.type !== "regular") {
+    if (memberIds.some((id) => foundById.get(id)?.type !== "regular")) {
       return NextResponse.json({ error: "Only regular members can have meals added" }, { status: 400 });
     }
 
-    // Setting a daily count (including 0) updates an existing entry in place so
-    // monthly totals and meal rates are recalculated from the stored count.
-    const result = await meals.updateOne(
-      {
-        memberId: new ObjectId(memberId),
-        month,
-        date,
-      },
-      {
-        $set: { count },
-        $setOnInsert: {
-          createdBy: sessionMember.member._id ?? new ObjectId(),
-          createdAt: new Date(),
+    const manager = sessionMember.member;
+    const createdBy = manager._id
+      ? manager._id instanceof ObjectId
+        ? manager._id
+        : new ObjectId(manager._id.toString())
+      : new ObjectId();
+    const createdAt = new Date();
+
+    // $setOnInsert only: an existing entry is never duplicated or overwritten.
+    const result = await meals.bulkWrite(
+      memberIds.map((memberId) => ({
+        updateOne: {
+          filter: { memberId: new ObjectId(memberId), month, date },
+          // memberId/month/date come from the equality filter on insert.
+          update: {
+            $setOnInsert: { count, createdBy, createdAt },
+          },
+          upsert: true,
         },
-      },
-      { upsert: true }
+      }))
     );
 
-    return NextResponse.json({ success: true, updated: result.matchedCount > 0 });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues[0]?.message || "Invalid request" }, { status: 400 });
-    }
-    return NextResponse.json({ error: "Failed to add meal" }, { status: 500 });
+    const added = result.upsertedCount;
+    const skipped = memberIds.length - added;
+
+    return NextResponse.json({ success: true, added, skipped });
+  } catch {
+    return NextResponse.json({ error: "Failed to add meals" }, { status: 500 });
   }
 }
 
