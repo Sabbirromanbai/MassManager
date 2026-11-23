@@ -1,6 +1,7 @@
 "use client";
 
 import { HeaderActions } from "@/components/header-actions";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { t } from "@/lib/lang";
 import { Lang } from "@/lib/lang";
 import { cn } from "cn";
@@ -53,7 +54,8 @@ export function PageHeader({
           )}
         </div>
       </div>
-      <div className="hidden shrink-0 lg:flex">
+      <div className="hidden shrink-0 items-center gap-2 lg:flex">
+        <NotificationBell lang={currentLang} />
         <HeaderActions currentLang={currentLang} variant="header" />
       </div>
     </header>

@@ -1,5 +1,5 @@
-import { Db, ObjectId } from "mongodb";
-import { Member } from "./models";
+import { ObjectId } from "mongodb";
+import { COLLECTIONS, Member } from "./models";
 import { getManagerRotationIndex, getCurrentMonth } from "./manager";
 import { getDb } from "./db";
 
@@ -44,4 +44,12 @@ export function isCurrentManagerMember(member: Member): boolean {
   const currentMonth = getCurrentMonth();
   const currentRotationIndex = getManagerRotationIndex(currentMonth);
   return member.rotationOrder === currentRotationIndex;
+}
+
+/** Resolves the member record for the manager assigned to the current month. */
+export async function getCurrentManagerMember(): Promise<Member | null> {
+  const db = await getDb();
+  return db.collection<Member>(COLLECTIONS.members).findOne({
+    rotationOrder: getManagerRotationIndex(getCurrentMonth()),
+  });
 }

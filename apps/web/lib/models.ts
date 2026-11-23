@@ -10,6 +10,7 @@ export const COLLECTIONS = {
   mealOffRequests: "mealOffRequests",
   months: "months",
   officeLoans: "officeLoans",
+  notifications: "notifications",
 } as const;
 
 export type MemberType = "regular" | "eggOnly" | "guest";
@@ -120,4 +121,29 @@ export interface OfficeLoan {
   note: string;
   repayments: OfficeLoanRepayment[];
   createdAt: Date;
+}
+
+export type NotificationType =
+  | "mealOffRequested"
+  | "mealOffApproved"
+  | "mealOffRejected";
+
+export interface LocalizedText {
+  bn: string;
+  en: string;
+}
+
+/** Member-scoped inbox records. `dedupeKey` makes event delivery idempotent. */
+export interface AppNotification {
+  _id?: ObjectId;
+  recipientMemberId: ObjectId;
+  recipientUserId?: string | null;
+  type: NotificationType;
+  title: LocalizedText;
+  message: LocalizedText;
+  relatedRequestId?: ObjectId | null;
+  link?: string | null;
+  dedupeKey?: string | null;
+  createdAt: Date;
+  readAt?: Date | null;
 }

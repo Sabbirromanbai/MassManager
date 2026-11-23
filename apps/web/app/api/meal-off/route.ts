@@ -3,13 +3,25 @@ import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
 import { ObjectId } from "mongodb";
 import { auth } from "@/lib/auth";
-import { getOrLinkMember, isCurrentManagerMember } from "@/lib/currentMember";
+import {
+  getCurrentManagerMember,
+  getOrLinkMember,
+  isCurrentManagerMember,
+} from "@/lib/currentMember";
 import {
   createMealOffRequestSchema,
   decideMealOffRequestSchema,
 } from "@/lib/schemas";
 import { COLLECTIONS, Member, MealOffRequest } from "@/lib/models";
 import { serializeMealOffRequest } from "@/lib/mealOffRequests";
+import {
+  createNotification,
+  mealOffDecisionContent,
+  mealOffDecisionDedupeKey,
+  mealOffNotificationLink,
+  mealOffSubmittedContent,
+  mealOffSubmittedDedupeKey,
+} from "@/lib/notifications";
 
 async function getSessionMember(): Promise<{
   user: { id: string; name: string; email: string } | null;
@@ -43,6 +55,13 @@ function getDhakaDate(): { month: string; date: number; hours: number } {
     date: dhakaTime.getDate(),
     hours: dhakaTime.getHours(),
   };
+}
+
+function toMemberObjectId(member: Member): ObjectId | null {
+  if (!member._id) return null;
+  return member._id instanceof ObjectId
+    ? member._id
+    : new ObjectId(member._id.toString());
 }
 
 export async function POST(request: NextRequest) {
@@ -123,7 +142,32 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
     });
 
-    return NextResponse.json({ success: true, id: result.insertedId.toString() });
+    const requestId = result.insertedId;
+    try {
+      const manager = await getCurrentManagerMember();
+      const managerObjectId = manager ? toMemberObjectId(manager) : null;
+      if (manager && managerObjectId) {
+        const content = mealOffSubmittedContent(
+          sessionMember.member.name,
+          month,
+          date
+        );
+        await createNotification(db, {
+          recipientMemberId: managerObjectId,
+          recipientUserId: manager.userId ?? null,
+          type: "mealOffRequested",
+          title: content.title,
+          message: content.message,
+          relatedRequestId: requestId,
+          link: mealOffNotificationLink(month),
+          dedupeKey: mealOffSubmittedDedupeKey(requestId.toString()),
+        });
+      }
+    } catch {
+      // Notification delivery is best-effort and must not fail the request.
+    }
+
+    return NextResponse.json({ success: true, id: requestId.toString() });
   } catch {
     return NextResponse.json(
       { error: "Failed to request meal off" },
@@ -209,6 +253,29 @@ export async function PATCH(request: NextRequest) {
         { error: "Meal off request not found" },
         { status: 404 }
       );
+    }
+
+    try {
+      const requester = await db
+        .collection<Member>(COLLECTIONS.members)
+        .findOne({ _id: updated.memberId });
+      const content = mealOffDecisionContent(
+        decision,
+        updated.month,
+        updated.date
+      );
+      await createNotification(db, {
+        recipientMemberId: updated.memberId,
+        recipientUserId: requester?.userId ?? null,
+        type: decision === "approved" ? "mealOffApproved" : "mealOffRejected",
+        title: content.title,
+        message: content.message,
+        relatedRequestId: objectId,
+        link: mealOffNotificationLink(updated.month),
+        dedupeKey: mealOffDecisionDedupeKey(objectId.toString()),
+      });
+    } catch {
+      // The decision is already committed; delivery failure is non-blocking.
     }
 
     return NextResponse.json({

@@ -8,6 +8,7 @@ import { cn } from "cn";
 import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import { useDashboard } from "@/components/dashboard/DashboardContext";
 import { HeaderActions } from "@/components/header-actions";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { t } from "@/lib/lang";
 import {
   LayoutDashboard,
@@ -161,8 +162,9 @@ export function DashboardMobileNav() {
           </span>
         </div>
 
-        {/* Right zone: Theme + Language + Sign Out */}
+        {/* Right zone: Notifications + Theme + Language + Sign Out */}
         <div className="flex flex-none items-center gap-1.5">
+          <NotificationBell lang={lang} variant="mobile" />
           <HeaderActions currentLang={lang} variant="header" showSignOut={true} />
         </div>
       </header>

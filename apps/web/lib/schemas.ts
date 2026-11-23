@@ -123,6 +123,10 @@ export const decideMealOffRequestSchema = z.object({
   decision: z.enum(["approved", "rejected"], "Decision must be approved or rejected"),
 });
 
+export const markNotificationReadSchema = z.object({
+  id: objectIdSchema,
+});
+
 const loanAmountSchema = z
   .number()
   .refine(Number.isFinite, "Amount must be a finite number")
@@ -176,6 +180,7 @@ export type CreateEggEntryInput = z.infer<typeof createEggEntrySchema>;
 export type CreateGuestMealInput = z.infer<typeof createGuestMealSchema>;
 export type CreateMealOffRequestInput = z.infer<typeof createMealOffRequestSchema>;
 export type DecideMealOffRequestInput = z.infer<typeof decideMealOffRequestSchema>;
+export type MarkNotificationReadInput = z.infer<typeof markNotificationReadSchema>;
 export type CreateMonthInput = z.infer<typeof createMonthSchema>;
 export type CreateOfficeLoanInput = z.infer<typeof createOfficeLoanSchema>;
 export type UpdateOfficeLoanInput = z.infer<typeof updateOfficeLoanSchema>;
