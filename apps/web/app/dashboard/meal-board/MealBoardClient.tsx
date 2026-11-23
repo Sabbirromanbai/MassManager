@@ -1136,7 +1136,7 @@ export function MealBoardClient({
                 {t(lang, "pages.mealBoard.mealOffButton")}
               </p>
               <Button
-                className="glass w-full"
+                className="app-primary-button w-full"
                 onClick={handleMealOffRequest}
                 disabled={requestingMealOff || !canRequestMealOff}
               >

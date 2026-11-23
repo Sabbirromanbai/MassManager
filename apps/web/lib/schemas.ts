@@ -103,6 +103,66 @@ export const createMonthSchema = z.object({
   closedAt: z.date().optional(),
 });
 
+const isoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+  .refine((value) => {
+    const parsed = new Date(`${value}T00:00:00.000Z`);
+    return (
+      !Number.isNaN(parsed.getTime()) &&
+      parsed.toISOString().slice(0, 10) === value
+    );
+  }, "Invalid date");
+
+const objectIdSchema = z
+  .string()
+  .regex(/^[0-9a-fA-F]{24}$/, "Invalid ID");
+
+const loanAmountSchema = z
+  .number()
+  .refine(Number.isFinite, "Amount must be a finite number")
+  .positive("Amount must be greater than zero")
+  .max(1_000_000_000, "Amount is too large");
+
+const loanNoteSchema = z.string().trim().max(500, "Note is too long");
+
+export const createOfficeLoanSchema = z.object({
+  amount: loanAmountSchema,
+  date: isoDateSchema,
+  note: loanNoteSchema.optional(),
+});
+
+export const updateOfficeLoanSchema = z
+  .object({
+    id: objectIdSchema,
+    amount: loanAmountSchema.optional(),
+    date: isoDateSchema.optional(),
+    note: loanNoteSchema.optional(),
+  })
+  .refine(
+    (data) =>
+      data.amount !== undefined ||
+      data.date !== undefined ||
+      data.note !== undefined,
+    { message: "No fields to update", path: ["id"] }
+  );
+
+export const deleteOfficeLoanSchema = z.object({
+  id: objectIdSchema,
+});
+
+export const createOfficeLoanRepaymentSchema = z.object({
+  loanId: objectIdSchema,
+  amount: loanAmountSchema,
+  date: isoDateSchema,
+  note: loanNoteSchema.optional(),
+});
+
+export const deleteOfficeLoanRepaymentSchema = z.object({
+  loanId: objectIdSchema,
+  repaymentId: objectIdSchema,
+});
+
 export type CreateMemberInput = z.infer<typeof createMemberSchema>;
 export type CreateMealInput = z.infer<typeof createMealSchema>;
 export type CreateBazarEntryInput = z.infer<typeof createBazarEntrySchema>;
@@ -111,3 +171,8 @@ export type CreateEggEntryInput = z.infer<typeof createEggEntrySchema>;
 export type CreateGuestMealInput = z.infer<typeof createGuestMealSchema>;
 export type CreateMealOffRequestInput = z.infer<typeof createMealOffRequestSchema>;
 export type CreateMonthInput = z.infer<typeof createMonthSchema>;
+export type CreateOfficeLoanInput = z.infer<typeof createOfficeLoanSchema>;
+export type UpdateOfficeLoanInput = z.infer<typeof updateOfficeLoanSchema>;
+export type CreateOfficeLoanRepaymentInput = z.infer<
+  typeof createOfficeLoanRepaymentSchema
+>;

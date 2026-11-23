@@ -21,6 +21,7 @@ import {
   User,
   BadgeCheck,
   Building2,
+  Landmark,
 } from "lucide-react";
 
 interface NavItem {
@@ -41,6 +42,7 @@ function getNavItems(lang: "bn" | "en") {
     ],
     money: [
       { href: "/dashboard/advance", labelKey: "nav.advance", icon: <Wallet className="size-5" />, managerOnly: true },
+      { href: "/dashboard/office-loans", labelKey: "nav.officeLoan", icon: <Landmark className="size-5" />, managerOnly: true },
       { href: "/dashboard/monthly", labelKey: "nav.monthlyHisab", icon: <Calendar className="size-5" />, managerOnly: true },
     ],
     people: [

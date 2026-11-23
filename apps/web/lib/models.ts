@@ -9,6 +9,7 @@ export const COLLECTIONS = {
   guestMeals: "guestMeals",
   mealOffRequests: "mealOffRequests",
   months: "months",
+  officeLoans: "officeLoans",
 } as const;
 
 export type MemberType = "regular" | "eggOnly" | "guest";
@@ -90,4 +91,24 @@ export interface Month {
   managerId: ObjectId;
   isLocked: boolean;
   closedAt?: Date;
+}
+
+/** Office-loan data is deliberately isolated from meals, bazar and advances. */
+export interface OfficeLoanRepayment {
+  _id?: ObjectId;
+  amount: number;
+  date: string;
+  note?: string;
+  createdAt: Date;
+}
+
+export interface OfficeLoan {
+  _id?: ObjectId;
+  /** The current manager who recorded the loan (their member ID). */
+  memberId: ObjectId;
+  amount: number;
+  date: string;
+  note: string;
+  repayments: OfficeLoanRepayment[];
+  createdAt: Date;
 }
