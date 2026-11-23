@@ -1,6 +1,9 @@
 import { cookies, headers } from "next/headers";
 import { auth } from "@/lib/auth";
-import { getOrLinkMember } from "@/lib/currentMember";
+import {
+  getOrLinkMember,
+  getWhatsappNumbersByMemberIds,
+} from "@/lib/currentMember";
 import { getCurrentMonth, getManagerRotationIndex } from "@/lib/manager";
 import { getMonthlySettlement, MemberSettlement } from "@/lib/stats";
 import { PageHeader } from "@/components/dashboard/PageHeader";
@@ -66,6 +69,11 @@ export default async function MemberReportPage({
         (m) => m.memberId === currentMemberId
       );
 
+  // Only numbers for reports the viewer can already see are sent to the client.
+  const whatsappNumbers = await getWhatsappNumbersByMemberIds(
+    members.map((member) => member.memberId)
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -82,6 +90,7 @@ export default async function MemberReportPage({
         isManager={isManager}
         currentMemberId={currentMemberId}
         members={members}
+        whatsappNumbers={whatsappNumbers}
       />
     </div>
   );

@@ -1,14 +1,14 @@
 "use client";
 
 import { createContext, useContext, ReactNode } from "react";
-import { Member } from "@/lib/models";
+import type { PublicMemberView } from "@/lib/memberView";
 import { Lang } from "@/lib/lang";
 
 interface DashboardContextValue {
   userName: string;
   isManager: boolean;
-  allMembers: Member[];
-  currentMember: Member | null;
+  allMembers: PublicMemberView[];
+  currentMember: PublicMemberView | null;
   lang: Lang;
 }
 

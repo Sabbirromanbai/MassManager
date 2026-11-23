@@ -1,11 +1,14 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getManagerNameForMonth, getCurrentMonth } from "@/lib/manager";
 import { getDashboardMembersWithMeals } from "@/lib/stats";
+import { getOrLinkMember, isCurrentManagerMember } from "@/lib/currentMember";
+import { auth } from "@/lib/auth";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { Badge } from "@workspace/ui/components/badge";
 import { cn } from "cn";
 import { Lang, t } from "@/lib/lang";
 import { Users, User } from "lucide-react";
+import { WhatsappNumberEditor } from "./WhatsappNumberEditor";
 
 interface MembersPageProps {
   searchParams: Promise<{ month?: string }>;
@@ -20,6 +23,20 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
 
   const members = await getDashboardMembersWithMeals(month);
   const managerName = getManagerNameForMonth(month);
+
+  // Phone numbers are only rendered for the current manager (the same rule the
+  // PATCH endpoint enforces). The dashboard layout handles unauthenticated users.
+  const session = await auth.api.getSession({ headers: await headers() });
+  const currentMember = session?.user
+    ? await getOrLinkMember({
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email ?? "",
+      })
+    : null;
+  const canEditWhatsapp = currentMember
+    ? isCurrentManagerMember(currentMember)
+    : false;
 
   function formatType(type: string): string {
     return t(lang, `badges.${type === "regular" ? "regular" : type === "eggOnly" ? "eggOnly" : "guest"}`);
@@ -98,6 +115,14 @@ export default async function MembersPage({ searchParams }: MembersPageProps) {
                     </span>
                   )}
                 </div>
+
+                {canEditWhatsapp && member._id && (
+                  <WhatsappNumberEditor
+                    memberId={member._id.toString()}
+                    initialNumber={member.whatsappNumber ?? null}
+                    lang={lang}
+                  />
+                )}
               </div>
             );
           })}

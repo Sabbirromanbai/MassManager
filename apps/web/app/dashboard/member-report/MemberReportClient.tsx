@@ -1,10 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { Button } from "@workspace/ui/components/button";
 import { Lang, t } from "@/lib/lang";
 import type { MemberSettlement } from "@/lib/stats";
 import type { SerializedOfficeLoan } from "@/lib/officeLoans";
+import { createReportPdfFile, downloadReportPdf, warmReportPdf } from "@/lib/reportPdf";
+import { REPORT_SHEET_CSS } from "@/lib/reportSheetCss";
+import {
+  buildReportFileName,
+  buildWhatsappLink,
+  buildWhatsappSummary,
+} from "@/lib/whatsappShare";
+import { formatBangladeshMobile, normalizeBangladeshMobile } from "@/lib/phone";
 import { MonthSelector } from "@/components/dashboard/MonthSelector";
 import {
   UtensilsCrossed,
@@ -13,6 +28,9 @@ import {
   Wallet,
   TrendingUp,
   Printer,
+  Share2,
+  Send,
+  Download,
 } from "lucide-react";
 
 interface MemberReportClientProps {
@@ -21,6 +39,7 @@ interface MemberReportClientProps {
   isManager: boolean;
   currentMemberId: string;
   members: MemberSettlement[];
+  whatsappNumbers: Record<string, string | null>;
 }
 
 export interface MemberReportLoanSummary {
@@ -71,6 +90,12 @@ function formatAmount(value: number, lang: Lang): string {
   }).format(value);
 }
 
+function devLog(...args: unknown[]): void {
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[member-report-share]", ...args);
+  }
+}
+
 /** Keep balances free of floating-point noise (mirrors the shared office loan helper). */
 function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -90,201 +115,46 @@ function badgeLabel(lang: Lang, type: MemberSettlement["memberType"]): string {
   return t(lang, `badges.${type}`);
 }
 
-const MEMBER_REPORT_PRINT_CSS = `
-@page { size: A4; margin: 0; }
-
-@media print {
-  html, body { margin: 0; padding: 0; background: #fff !important; }
-  /* The dashboard main has responsive padding; with @page margin 0 it would
-     push a 210mm sheet off the right edge and add a blank trailing page. */
-  main { margin: 0 !important; padding: 0 !important; }
-  aside, nav, header, button, select { display: none !important; }
-  .member-report-toolbar { display: none !important; }
-  main > .pointer-events-none { display: none !important; }
-  /* The base .mr-sheet rule below declares width: 100% later in this sheet. */
-  .mr-sheet { width: 210mm !important; }
-  body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-}
-
-.mr-sheet {
-  width: 100%;
-  background: #fff;
-  color: #111827;
-  border-radius: 18px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.08);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  overflow: hidden;
-}
-
-.mr-header {
-  display: flex;
-  flex-direction: column;
-  padding: 36px 42px 24px;
-  background: linear-gradient(135deg, #064e3b 0%, #134e3f 55%, #1f7a5a 100%);
-  color: #fff;
-}
-
-.mr-header-brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 16px;
-}
-
-.mr-header-mark {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mr-header-mark img { width: 26px; height: 26px; display: block; }
-
-.mr-header-brand-name {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background: linear-gradient(to right, #fff, #d1fae5);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.mr-header-kicker {
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.mr-header-title {
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 1.15;
-  margin: 8px 0 4px;
-  color: #fff;
-}
-
-.mr-header-subtitle {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
-  margin: 0;
-}
-
-.mr-header-role {
-  align-self: flex-start;
-  margin-top: 12px;
-  padding: 5px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.mr-body {
-  padding: 22px 30px 30px;
-}
-
-.mr-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-}
-
-.mr-stat {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  padding: 15px 17px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-}
-
-.mr-stat-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
-  margin-bottom: 11px;
-}
-
-.mr-stat-icon svg { width: 16px; height: 16px; }
-
-.mr-stat-value { font-size: 21px; font-weight: 700; color: #111827; }
-.mr-stat-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: #6b7280;
-  margin-top: 3px;
-}
-
-.mr-sections {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-  margin-top: 16px;
-}
-
-.mr-section {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  padding: 17px 18px;
-}
-
-.mr-section-title {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #6b7280;
-  margin-bottom: 12px;
-}
-
-.mr-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 5px 0;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 13px;
-}
-
-.mr-row:last-child { border-bottom: none; }
-.mr-row-label { color: #6b7280; min-width: 0; }
-.mr-row-value { font-weight: 700; text-align: right; white-space: nowrap; }
-.mr-row-value--danger { color: #b91c1c; }
-.mr-row-value--emerald { color: #047857; }
-.mr-row-value--faint { color: #9ca3af; }
-
-.mr-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px;
-  padding: 14px 30px 20px;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
-  font-size: 12px;
-  color: #6b7280;
-}
-`;
-
 export function MemberReportClient({
   lang,
   month,
   isManager,
   currentMemberId,
   members,
+  whatsappNumbers,
 }: MemberReportClientProps) {
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const [sharing, setSharing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [shareNotice, setShareNotice] = useState("");
+  const [shareError, setShareError] = useState("");
+  const latestRef = useRef<{
+    data: MemberReportData | null;
+    members: MemberSettlement[];
+    whatsappNumbers: Record<string, string | null>;
+    lang: Lang;
+    month: string;
+    isManager: boolean;
+    currentMemberId: string;
+    loansLoaded: boolean;
+    officeLoans: SerializedOfficeLoan[];
+  }>({
+    data: null,
+    members: [],
+    whatsappNumbers: {},
+    lang,
+    month,
+    isManager,
+    currentMemberId,
+    loansLoaded: false,
+    officeLoans: [],
+  });
+  const [sendAllPhase, setSendAllPhase] = useState<
+    "idle" | "running" | "done"
+  >("idle");
+  const [sendAllQueue, setSendAllQueue] = useState<string[]>([]);
+  const [sendAllStatus, setSendAllStatus] = useState<Record<string, string>>({});
+
   const [selectedId, setSelectedId] = useState<string>(() => {
     if (!isManager) return currentMemberId;
     const own = members.find((m) => m.memberId === currentMemberId);
@@ -389,8 +259,297 @@ export function MemberReportClient({
     };
   }, [report, averageRate, loanSummary, month]);
 
+  latestRef.current = {
+    data,
+    members,
+    whatsappNumbers,
+    lang,
+    month,
+    isManager,
+    currentMemberId,
+    loansLoaded,
+    officeLoans,
+  };
+
   const ownName = members.find((m) => m.memberId === currentMemberId)
     ?.memberName;
+
+  // All values come from the already-computed report data; nothing is recalculated.
+  const whatsappSummary = useMemo(() => {
+    if (!data) return "";
+    return buildWhatsappSummary(t(lang, "pages.memberReport.whatsappSummary"), {
+      memberName: data.memberName,
+      month: data.month,
+      meals: data.meals > 0 ? String(data.meals) : "—",
+      averageRate:
+        data.averageRate !== null ? formatAmount(data.averageRate, lang) : "—",
+      mealCost: data.mealCost > 0 ? formatAmount(data.mealCost, lang) : "—",
+      advance: data.advance > 0 ? formatAmount(data.advance, lang) : "—",
+      due: formatAmount(data.due, lang),
+    });
+  }, [data, lang]);
+
+  const whatsappLink = useMemo(
+    () =>
+      buildWhatsappLink(
+        whatsappNumbers[selectedId] ?? null,
+        whatsappSummary
+      ),
+    [whatsappNumbers, selectedId, whatsappSummary]
+  );
+
+  const runShareFlow = async (
+    lang: Lang,
+    summary: string,
+    fileName: string
+  ): Promise<
+    "shared" | "downloaded" | "aborted" | "failed" | "captureFailed"
+  > => {
+    const sheet = sheetRef.current;
+    devLog("share flow: sheet lookup", Boolean(sheet), sheet?.className ?? "none");
+    if (!sheet) return "failed";
+
+    let file: File;
+    try {
+      file = await createReportPdfFile(sheet, fileName);
+    } catch (error) {
+      devLog("share flow: pdf generation failed", error);
+      return "captureFailed";
+    }
+
+    let canShareFiles = false;
+    if (
+      typeof navigator.share === "function" &&
+      typeof navigator.canShare === "function"
+    ) {
+      try {
+        canShareFiles = navigator.canShare({ files: [file] });
+      } catch (error) {
+        devLog("share flow: canShare threw", error);
+        canShareFiles = false;
+      }
+    }
+    devLog("share flow: canShare result", canShareFiles);
+
+    if (canShareFiles) {
+      try {
+        devLog("share flow: navigator.share call", fileName);
+        await navigator.share({
+          files: [file],
+          title: t(lang, "pages.memberReport.shareTitle"),
+          text: summary,
+        });
+        devLog("share flow: navigator.share resolved", "shared");
+        return "shared";
+      } catch (caught) {
+        devLog("share flow: navigator.share rejected", caught);
+        if (caught instanceof DOMException && caught.name === "AbortError") {
+          return "aborted";
+        }
+        // Fall through to the download fallback below.
+      }
+    }
+
+    try {
+      downloadReportPdf(file);
+      return "downloaded";
+    } catch (error) {
+      devLog("share flow: download fallback failed", error);
+      return "failed";
+    }
+  };
+
+  const handleShare = useCallback(
+    async (memberId: string): Promise<boolean> => {
+      const state = latestRef.current;
+      const rep = state.members.find((m) => m.memberId === memberId) ?? null;
+      if (!rep) {
+        setShareError(t(state.lang, "pages.memberReport.shareFailed"));
+        return false;
+      }
+      const averageRate = rep.meals > 0 ? rep.mealCost / rep.meals : null;
+      const summary = buildWhatsappSummary(
+        t(state.lang, "pages.memberReport.whatsappSummary"),
+        {
+          memberName: rep.memberName,
+          month: state.month,
+          meals: rep.meals > 0 ? String(rep.meals) : "—",
+          averageRate:
+            averageRate !== null ? formatAmount(averageRate, state.lang) : "—",
+          mealCost: rep.mealCost > 0 ? formatAmount(rep.mealCost, state.lang) : "—",
+          advance: rep.advance > 0 ? formatAmount(rep.advance, state.lang) : "—",
+          due: formatAmount(rep.due, state.lang),
+        }
+      );
+      const link = buildWhatsappLink(
+        state.whatsappNumbers[memberId] ?? null,
+        summary
+      );
+      if (!link) {
+        setShareError(t(state.lang, "pages.memberReport.shareNoNumber"));
+        return false;
+      }
+
+      setSharing(true);
+      setShareNotice("");
+      setShareError("");
+      const result = await runShareFlow(
+        state.lang,
+        summary,
+        buildReportFileName(rep.memberName, state.month)
+      );
+      setSharing(false);
+
+      if (result === "shared") {
+        setShareNotice(t(state.lang, "pages.memberReport.shareOpened"));
+        return true;
+      }
+      if (result === "downloaded") {
+        setShareNotice(t(state.lang, "pages.memberReport.downloadDone"));
+        return true;
+      }
+      if (result === "captureFailed") {
+        setShareError(t(state.lang, "pages.memberReport.shareFailed"));
+        return false;
+      }
+      if (result === "failed") {
+        setShareError(t(state.lang, "pages.memberReport.shareFailed"));
+        return false;
+      }
+      return false;
+    },
+    []
+  );
+
+  async function handleDownload() {
+    const sheet = sheetRef.current;
+    if (!sheet || !data) return;
+    setDownloading(true);
+    setShareError("");
+    try {
+      const file = await createReportPdfFile(
+        sheet,
+        buildReportFileName(data.memberName, data.month)
+      );
+      const url = URL.createObjectURL(file);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = file.name;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setShareError(t(lang, "pages.memberReport.shareFailed"));
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  const sendAllBusy = sendAllPhase === "running";
+
+  const sendAllEntries = useMemo(() => {
+    const list: Array<{
+      memberId: string;
+      memberName: string;
+      number: string | null;
+      status: string;
+    }> = [];
+    for (const member of members) {
+      if (member.memberType !== "regular") continue;
+      const number = whatsappNumbers[member.memberId] ?? null;
+      const normalized = number ? normalizeBangladeshMobile(number) : null;
+      list.push({
+        memberId: member.memberId,
+        memberName: member.memberName,
+        number: normalized,
+        status: normalized ? "ready" : "missing",
+      });
+    }
+    return list.sort((a, b) => a.memberName.localeCompare(b.memberName));
+  }, [members, whatsappNumbers]);
+
+  const sendAllStats = useMemo(() => {
+    const statuses = Object.values(sendAllStatus);
+    return {
+      total: sendAllEntries.length,
+      ready: sendAllEntries.filter((e) => e.status === "ready").length,
+      missing: sendAllEntries.filter((e) => e.status === "missing").length,
+      opened: statuses.filter((s) => s === "opened").length,
+      failed: statuses.filter((s) => s === "failed").length,
+    };
+  }, [sendAllEntries, sendAllStatus]);
+
+  useEffect(() => {
+    if (sendAllPhase !== "running") return;
+    if (sendAllQueue.length === 0) {
+      setSendAllPhase("done");
+      return;
+    }
+    const memberId = sendAllQueue[0];
+    if (!memberId) {
+      setSendAllPhase("done");
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const ok = await handleShare(memberId);
+      if (cancelled) return;
+      setSendAllStatus((prev) => ({
+        ...prev,
+        [memberId]: ok ? "opened" : "failed",
+      }));
+      if (ok) {
+        setSendAllQueue((prev) => prev.slice(1));
+      } else {
+        setSendAllQueue([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sendAllPhase, sendAllQueue, handleShare]);
+
+  const sendAllStatusLabel = (status: string): string => {
+    switch (status) {
+      case "ready":
+        return t(lang, "pages.memberReport.sendAllStatusReady");
+      case "missing":
+        return t(lang, "pages.memberReport.sendAllStatusMissing");
+      case "opened":
+        return t(lang, "pages.memberReport.sendAllStatusOpened");
+      default:
+        return t(lang, "pages.memberReport.sendAllFailed");
+    }
+  };
+
+  async function handleSendAll() {
+    const ready = sendAllEntries.filter((e) => e.status === "ready");
+    setSendAllStatus(() => {
+      const next: Record<string, string> = {};
+      for (const entry of sendAllEntries) {
+        next[entry.memberId] = entry.status;
+      }
+      return next;
+    });
+    if (ready.length === 0) {
+      setSendAllQueue([]);
+      setSendAllPhase("idle");
+      return;
+    }
+    setSendAllQueue(ready.map((e) => e.memberId));
+    setSendAllPhase("running");
+  }
+
+  async function handleSendOne(memberId: string) {
+    const entry = sendAllEntries.find((e) => e.memberId === memberId);
+    if (!entry || entry.status !== "ready") return;
+    const ok = await handleShare(memberId);
+    setSendAllStatus((prev) => ({
+      ...prev,
+      [memberId]: ok ? "opened" : "failed",
+    }));
+  }
 
   return (
     <div className="space-y-4">
@@ -434,16 +593,200 @@ export function MemberReportClient({
           <div className="min-w-0 flex-1">
             <MonthSelector />
           </div>
-          <Button
-            variant="outline"
-            onClick={() => window.print()}
-            className="shrink-0 rounded-xl"
-          >
-            <Printer className="size-4" />
-            {t(lang, "pages.memberReport.print")}
-          </Button>
+          <div className="flex shrink-0 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => window.print()}
+              className="rounded-xl"
+            >
+              <Printer className="size-4" />
+              {t(lang, "pages.memberReport.print")}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => void handleDownload()}
+              onPointerEnter={warmReportPdf}
+              onFocus={warmReportPdf}
+              disabled={downloading || sharing || !data}
+              className="rounded-xl"
+            >
+              {downloading ? (
+                <span className="app-spinner" aria-hidden="true" />
+              ) : (
+                <Download className="size-4" />
+              )}
+              <span>
+                {downloading
+                  ? t(lang, "pages.memberReport.sharePreparing")
+                  : t(lang, "pages.memberReport.download")}
+              </span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (selectedId) void handleShare(selectedId);
+              }}
+              onPointerEnter={warmReportPdf}
+              onFocus={warmReportPdf}
+              disabled={!whatsappLink || sharing || !data}
+              className="rounded-xl"
+              title={
+                !whatsappLink
+                  ? t(lang, "pages.memberReport.shareNoNumber")
+                  : undefined
+              }
+            >
+              {sharing ? (
+                <span className="app-spinner" aria-hidden="true" />
+              ) : (
+                <Share2 className="size-4" />
+              )}
+              <span>
+                {sharing
+                  ? t(lang, "pages.memberReport.sharePreparing")
+                  : t(lang, "pages.memberReport.share")}
+              </span>
+            </Button>
+          </div>
         </div>
+
+        {!whatsappLink && data && (
+          <p
+            role="status"
+            className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs app-text-warning"
+          >
+            {t(lang, "pages.memberReport.shareNoNumber")}
+          </p>
+        )}
+        {shareNotice && (
+          <p
+            role="status"
+            className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs app-text-emerald"
+          >
+            {shareNotice}
+          </p>
+        )}
+        {shareError && (
+          <div
+            role="alert"
+            className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs app-text-warning"
+          >
+            <p>{shareError}</p>
+            {whatsappLink && (
+              <a
+                href={whatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-block font-semibold underline underline-offset-2"
+              >
+                {t(lang, "pages.memberReport.shareWhatsappLink")}
+              </a>
+            )}
+            <p className="mt-1 opacity-80">
+              {t(lang, "pages.memberReport.shareNote")}
+            </p>
+          </div>
+        )}
+        {!shareError && whatsappLink && (
+          <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] app-text-faint">
+            <a
+              href={whatsappLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold app-text-emerald underline underline-offset-2"
+            >
+              {t(lang, "pages.memberReport.shareWhatsappLink")}
+            </a>
+            <span>{t(lang, "pages.memberReport.shareNote")}</span>
+          </p>
+        )}
       </div>
+
+      {isManager && (
+        <div className="member-report-send-all glass-strong rounded-2xl border app-border p-3 md:p-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold app-text">
+                {t(lang, "pages.memberReport.sendAllTitle")}
+              </p>
+              <p className="mt-0.5 text-xs app-text-faint">
+                {t(lang, "pages.memberReport.sendAllDescription")}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => void handleSendAll()}
+              disabled={sendAllBusy || sendAllStats.ready === 0}
+              className="shrink-0 rounded-xl"
+            >
+              {sendAllBusy ? (
+                <span className="app-spinner" aria-hidden="true" />
+              ) : (
+                <Send className="size-4" />
+              )}
+              <span>
+                {sendAllBusy
+                  ? t(lang, "pages.memberReport.sendAllPreparing")
+                  : t(lang, "pages.memberReport.sendAllSend")}
+              </span>
+            </Button>
+          </div>
+
+          <p className="mt-3 text-[11px] app-text-faint">
+            {t(lang, "pages.memberReport.sendAllTotal")}: {sendAllStats.total}{" "}
+            · {t(lang, "pages.memberReport.sendAllReady")}: {sendAllStats.ready}{" "}
+            · {t(lang, "pages.memberReport.sendAllMissing")}: {sendAllStats.missing}{" "}
+            · {t(lang, "pages.memberReport.sendAllOpened")}: {sendAllStats.opened}
+          </p>
+
+          {sendAllStats.total === 0 ? (
+            <p className="mt-2 text-xs app-text-faint">
+              {t(lang, "pages.memberReport.sendAllNoReady")}
+            </p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {sendAllEntries.map((entry) => (
+                <li
+                  key={entry.memberId}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border app-border px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-medium app-text">
+                      {entry.memberName}
+                    </p>
+                    <p className="text-[11px] app-text-faint">
+                      {entry.status === "ready"
+                        ? formatBangladeshMobile(entry.number ?? "")
+                        : t(lang, "pages.memberReport.sendAllStatusMissing")}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-medium app-text-faint">
+                      {sendAllStatusLabel(entry.status)}
+                    </span>
+                    {entry.status === "ready" ? (
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="outline"
+                        disabled={sendAllBusy}
+                        onClick={() => void handleSendOne(entry.memberId)}
+                        className="rounded-lg"
+                      >
+                        {t(lang, "pages.memberReport.sendAllSend")}
+                      </Button>
+                    ) : (
+                      <span className="text-[11px] app-text-faint">
+                        {t(lang, "pages.memberReport.sendAllStatusMissing")}
+                      </span>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {members.length === 0 || !data ? (
         <p className="rounded-xl border app-border app-surface px-4 py-3 text-sm app-text-faint">
@@ -452,7 +795,7 @@ export function MemberReportClient({
             : t(lang, "pages.memberReport.noMemberData")}
         </p>
       ) : (
-        <MemberReportSheet data={data} lang={lang} />
+        <MemberReportSheet data={data} lang={lang} sheetRef={sheetRef} />
       )}
     </div>
   );
@@ -461,9 +804,11 @@ export function MemberReportClient({
 function MemberReportSheet({
   data,
   lang,
+  sheetRef,
 }: {
   data: MemberReportData;
   lang: Lang;
+  sheetRef: RefObject<HTMLDivElement | null>;
 }) {
   const {
     memberName,
@@ -549,8 +894,8 @@ function MemberReportSheet({
 
   return (
     <>
-      <style>{MEMBER_REPORT_PRINT_CSS}</style>
-      <div className="mr-sheet">
+      <style>{REPORT_SHEET_CSS}</style>
+      <div ref={sheetRef} className="mr-sheet">
         <div className="mr-header">
           <div className="mr-header-brand">
             <div className="mr-header-mark">

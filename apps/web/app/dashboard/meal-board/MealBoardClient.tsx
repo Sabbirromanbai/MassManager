@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "cn";
 import { Button } from "@workspace/ui/components/button";
 import { Lang, t } from "@/lib/lang";
-import { Member } from "@/lib/models";
+import type { PublicMemberView } from "@/lib/memberView";
 import {
   isMealOffApproved,
   isMealOffVisible,
@@ -42,10 +42,10 @@ interface MealBoardClientProps {
   lang: Lang;
   month: string;
   isManager: boolean;
-  currentMember: Member;
-  regularMembers: Member[];
-  eggOnlyMembers: Member[];
-  guestMembers: Member[];
+  currentMember: PublicMemberView;
+  regularMembers: PublicMemberView[];
+  eggOnlyMembers: PublicMemberView[];
+  guestMembers: PublicMemberView[];
   mealsMap: Map<string, number>;
   eggMap: Map<string, number>;
   mealOffRequests: MealOffRequestView[];

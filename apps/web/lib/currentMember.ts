@@ -46,6 +46,32 @@ export function isCurrentManagerMember(member: Member): boolean {
   return member.rotationOrder === currentRotationIndex;
 }
 
+/**
+ * WhatsApp numbers for the given member IDs. Used by the report page so only
+ * numbers the viewer is already allowed to see are sent to the client.
+ */
+export async function getWhatsappNumbersByMemberIds(
+  memberIds: string[]
+): Promise<Record<string, string | null>> {
+  if (memberIds.length === 0) return {};
+
+  const db = await getDb();
+  const docs = await db
+    .collection<Member>(COLLECTIONS.members)
+    .find(
+      { _id: { $in: memberIds.map((id) => new ObjectId(id)) } },
+      { projection: { whatsappNumber: 1 } }
+    )
+    .toArray();
+
+  const numbers: Record<string, string | null> = {};
+  for (const doc of docs) {
+    if (!doc._id) continue;
+    numbers[doc._id.toString()] = doc.whatsappNumber ?? null;
+  }
+  return numbers;
+}
+
 /** Resolves the member record for the manager assigned to the current month. */
 export async function getCurrentManagerMember(): Promise<Member | null> {
   const db = await getDb();

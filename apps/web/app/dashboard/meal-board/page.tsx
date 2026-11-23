@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/dashboard/PageHeader";
 import { MealBoardClient } from "./MealBoardClient";
 import { Lang, t } from "@/lib/lang";
 import { EggEntry, GuestMeal, MealOffRequest, Member } from "@/lib/models";
+import { toPublicMember } from "@/lib/memberView";
 import {
   type MealOffRequestView,
   serializeMealOffRequest,
@@ -33,10 +34,6 @@ async function getSessionMember() {
   const lang = (cookieStore.get("lang")?.value as Lang) ?? "bn";
 
   return { user, member, lang };
-}
-
-function toClientMember(member: Member): Member {
-  return { ...member, _id: member._id?.toString() };
 }
 
 export default async function MealBoardPage({ searchParams }: MealBoardPageProps) {
@@ -154,10 +151,10 @@ export default async function MealBoardPage({ searchParams }: MealBoardPageProps
         lang={lang}
         month={month}
         isManager={isManager}
-        currentMember={toClientMember(member)}
-        regularMembers={regularMembers.map(toClientMember)}
-        eggOnlyMembers={eggOnlyMembers.map(toClientMember)}
-        guestMembers={guestMembers.map(toClientMember)}
+        currentMember={toPublicMember(member)}
+        regularMembers={regularMembers.map(toPublicMember)}
+        eggOnlyMembers={eggOnlyMembers.map(toPublicMember)}
+        guestMembers={guestMembers.map(toPublicMember)}
         mealsMap={mealsMap}
         eggMap={eggMap}
         mealOffRequests={mealOffRequests}

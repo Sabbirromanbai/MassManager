@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeBangladeshMobile } from "./phone";
 
 const monthSchema = z.string().regex(/^\d{4}-\d{2}$/, "Month must be in YYYY-MM format");
 const dateSchema = z.number().int().min(1).max(31, "Date must be between 1 and 31");
@@ -127,6 +128,19 @@ export const markNotificationReadSchema = z.object({
   id: objectIdSchema,
 });
 
+/** Empty string clears the stored number; any other value must be a BD mobile. */
+export const updateMemberWhatsappSchema = z.object({
+  memberId: objectIdSchema,
+  whatsappNumber: z
+    .string()
+    .trim()
+    .max(30, "WhatsApp number is too long")
+    .refine(
+      (value) => value === "" || normalizeBangladeshMobile(value) !== null,
+      "Invalid Bangladesh mobile number"
+    ),
+});
+
 /** Batch meal entry: one date and count applied to every selected member. */
 export const createMealsSchema = z.object({
   memberIds: z.array(objectIdSchema).min(1, "Select at least one member"),
@@ -190,6 +204,7 @@ export type CreateGuestMealInput = z.infer<typeof createGuestMealSchema>;
 export type CreateMealOffRequestInput = z.infer<typeof createMealOffRequestSchema>;
 export type DecideMealOffRequestInput = z.infer<typeof decideMealOffRequestSchema>;
 export type MarkNotificationReadInput = z.infer<typeof markNotificationReadSchema>;
+export type UpdateMemberWhatsappInput = z.infer<typeof updateMemberWhatsappSchema>;
 export type CreateMonthInput = z.infer<typeof createMonthSchema>;
 export type CreateOfficeLoanInput = z.infer<typeof createOfficeLoanSchema>;
 export type UpdateOfficeLoanInput = z.infer<typeof updateOfficeLoanSchema>;

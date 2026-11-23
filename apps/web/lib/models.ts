@@ -24,6 +24,8 @@ export interface Member {
   isActive: boolean;
   rotationOrder: number | null;
   createdAt: Date;
+  /** Normalized Bangladesh mobile digits (8801XXXXXXXXX); absent for legacy members. */
+  whatsappNumber?: string | null;
 }
 
 export interface Meal {

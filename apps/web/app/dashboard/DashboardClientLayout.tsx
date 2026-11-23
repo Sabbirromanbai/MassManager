@@ -3,15 +3,15 @@
 import { DashboardProvider } from "@/components/dashboard/DashboardContext";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardMobileNav } from "./DashboardMobileNav";
-import { Member } from "@/lib/models";
+import type { PublicMemberView } from "@/lib/memberView";
 import { Lang } from "@/lib/lang";
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
   userName: string;
   isManager: boolean;
-  allMembers: Member[];
-  currentMember: Member | null;
+  allMembers: PublicMemberView[];
+  currentMember: PublicMemberView | null;
   lang: Lang;
 }
 
