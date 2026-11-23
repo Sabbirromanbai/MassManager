@@ -1,6 +1,18 @@
 import { Db, ObjectId, Collection } from "mongodb";
 import { getDb } from "./db";
 import { EggEntry, GuestMeal, Member, MemberType } from "./models";
+import { calculateMealRate } from "./mealRate";
+import { EGG_PRICE_PER_PIECE, GUEST_RATE_PER_MEAL } from "./mealBoard";
+
+interface MemberMealTotal {
+  memberId: string;
+  meals: number;
+}
+
+interface SeparateConsumption {
+  totalEggPieces: number;
+  totalGuestMeals: number;
+}
 
 export interface DashboardStats {
   totalBazar: number;
@@ -32,23 +44,132 @@ function getMemberCollection(db: Db): Collection<Member> {
   return db.collection<Member>("members");
 }
 
+/** Meal totals keyed by member id, reused for both the chart and the rate. */
+async function getMealsByMember(
+  mealCollection: Collection,
+  month: string
+): Promise<MemberMealTotal[]> {
+  const rows = await mealCollection
+    .aggregate<{ _id: ObjectId; meals: number }>([
+      { $match: { month } },
+      { $group: { _id: "$memberId", meals: { $sum: "$count" } } },
+    ])
+    .toArray();
+
+  return rows.map((row) => ({
+    memberId: row._id.toString(),
+    meals: row.meals,
+  }));
+}
+
+/** Egg-only and guest members never count toward the regular meal divisor. */
+function sumRegularMeals(
+  mealsByMember: MemberMealTotal[],
+  members: Member[]
+): number {
+  const regularIds = new Set(
+    members
+      .filter((member) => member.type === "regular")
+      .map((member) => member._id!.toString())
+  );
+
+  return mealsByMember.reduce(
+    (total, entry) =>
+      total + (regularIds.has(entry.memberId) ? entry.meals : 0),
+    0
+  );
+}
+
+/**
+ * Quantities come from the existing eggEntries / guestMeals records. Only
+ * entries belonging to active egg-only / guest members are billed, matching
+ * the members included in the settlement.
+ */
+function getSeparateConsumption(
+  members: Member[],
+  eggEntries: Pick<EggEntry, "memberId" | "pieces">[],
+  guestEntries: Pick<GuestMeal, "guestName" | "meals">[]
+): SeparateConsumption {
+  const eggOnlyIds = new Set(
+    members
+      .filter((member) => member.type === "eggOnly")
+      .map((member) => member._id!.toString())
+  );
+  const guestNames = new Set(
+    members
+      .filter((member) => member.type === "guest")
+      .map((member) => member.name)
+  );
+
+  return {
+    totalEggPieces: eggEntries
+      .filter((entry) => eggOnlyIds.has(entry.memberId.toString()))
+      .reduce((total, entry) => total + entry.pieces, 0),
+    totalGuestMeals: guestEntries
+      .filter((entry) => guestNames.has(entry.guestName))
+      .reduce((total, entry) => total + entry.meals, 0),
+  };
+}
+
 export async function getDashboardStats(month: string): Promise<DashboardStats> {
   const db = await getDb();
   const bazarCollection = getBazarCollection(db);
   const advanceCollection = getAdvanceCollection(db);
   const mealCollection = getMealCollection(db);
   const memberCollection = getMemberCollection(db);
+  const eggCollection = db.collection<EggEntry>("eggEntries");
+  const guestCollection = db.collection<GuestMeal>("guestMeals");
 
-  const [totalBazar, totalAdvance, totalMeal, mealsPerMember, dailyBazar] = await Promise.all([
+  const [
+    totalBazar,
+    totalAdvance,
+    totalMeal,
+    mealsByMember,
+    members,
+    eggEntries,
+    guestEntries,
+    dailyBazar,
+  ] = await Promise.all([
     getTotalBazar(bazarCollection, month),
     getTotalAdvance(advanceCollection, month),
     getTotalMeal(mealCollection, month),
-    getMealsPerMember(mealCollection, memberCollection, month),
+    getMealsByMember(mealCollection, month),
+    memberCollection
+      .find({}, { projection: { name: 1, type: 1, isActive: 1 } })
+      .toArray(),
+    eggCollection
+      .find({ month }, { projection: { memberId: 1, pieces: 1 } })
+      .toArray(),
+    guestCollection
+      .find({ month }, { projection: { guestName: 1, meals: 1 } })
+      .toArray(),
     getDailyBazar(bazarCollection, month),
   ]);
 
+  const activeMembers = members.filter((member) => member.isActive);
+  const memberNameById = new Map(
+    members.map((member) => [member._id!.toString(), member.name])
+  );
+  const mealsPerMember = mealsByMember
+    .map((entry) => ({
+      name: memberNameById.get(entry.memberId) ?? "Unknown",
+      meals: entry.meals,
+    }))
+    .sort((a, b) => b.meals - a.meals);
+
+  const { totalEggPieces, totalGuestMeals } = getSeparateConsumption(
+    activeMembers,
+    eggEntries,
+    guestEntries
+  );
+  const { mealRate } = calculateMealRate(
+    totalBazar,
+    totalEggPieces,
+    totalGuestMeals,
+    sumRegularMeals(mealsByMember, activeMembers)
+  );
+
   const cashInHand = totalAdvance - totalBazar;
-  const mealRate = totalMeal > 0 ? totalBazar / totalMeal : 0;
 
   return {
     totalBazar,
@@ -101,37 +222,6 @@ async function getTotalMeal(
     .toArray();
 
   return result[0]?.total ?? 0;
-}
-
-async function getMealsPerMember(
-  mealCollection: Collection,
-  memberCollection: Collection<Member>,
-  month: string
-): Promise<{ name: string; meals: number }[]> {
-  const mealsByMember = await mealCollection
-    .aggregate<{ _id: ObjectId; meals: number }>([
-      { $match: { month } },
-      { $group: { _id: "$memberId", meals: { $sum: "$count" } } },
-    ])
-    .toArray();
-
-  if (mealsByMember.length === 0) {
-    return [];
-  }
-
-  const memberIds = mealsByMember.map((m) => m._id);
-  const members = await memberCollection
-    .find({ _id: { $in: memberIds } }, { projection: { name: 1 } })
-    .toArray();
-
-  const memberMap = new Map(members.map((m) => [m._id!.toString(), m.name]));
-
-  return mealsByMember
-    .map((m) => ({
-      name: memberMap.get(m._id.toString()) ?? "Unknown",
-      meals: m.meals,
-    }))
-    .sort((a, b) => b.meals - a.meals);
 }
 
 async function getDailyBazar(
@@ -246,12 +336,7 @@ export async function getMonthlySettlement(
     getTotalBazar(bazarCollection, month),
     getTotalAdvance(advanceCollection, month),
     getTotalMeal(mealCollection, month),
-    mealCollection
-      .aggregate<{ _id: ObjectId; meals: number }>([
-        { $match: { month } },
-        { $group: { _id: "$memberId", meals: { $sum: "$count" } } },
-      ])
-      .toArray(),
+    getMealsByMember(mealCollection, month),
     advanceCollection
       .aggregate<{ _id: ObjectId; advance: number }>([
         { $match: { month } },
@@ -263,29 +348,36 @@ export async function getMonthlySettlement(
   ]);
 
   const mealMap = new Map(
-    mealsByMember.map((m) => [m._id.toString(), m.meals])
+    mealsByMember.map((m) => [m.memberId, m.meals])
   );
   const advanceMap = new Map(
     advancesByMember.map((a) => [a._id.toString(), a.advance])
   );
 
-  const mealRate = totalMeal > 0 ? totalBazar / totalMeal : 0;
+  const { totalEggPieces, totalGuestMeals } = getSeparateConsumption(
+    members,
+    eggEntries,
+    guestEntries
+  );
+  const { mealRate } = calculateMealRate(
+    totalBazar,
+    totalEggPieces,
+    totalGuestMeals,
+    sumRegularMeals(mealsByMember, members)
+  );
 
-  const eggByMember = new Map<string, { pieces: number; cost: number }>();
+  const eggPiecesByMember = new Map<string, number>();
   for (const entry of eggEntries) {
     const id = entry.memberId.toString();
-    const current = eggByMember.get(id) ?? { pieces: 0, cost: 0 };
-    current.pieces += entry.pieces;
-    current.cost += entry.pieces * entry.pricePerPiece;
-    eggByMember.set(id, current);
+    eggPiecesByMember.set(id, (eggPiecesByMember.get(id) ?? 0) + entry.pieces);
   }
 
-  const guestByName = new Map<string, { meals: number; cost: number }>();
+  const guestMealsByName = new Map<string, number>();
   for (const entry of guestEntries) {
-    const current = guestByName.get(entry.guestName) ?? { meals: 0, cost: 0 };
-    current.meals += entry.meals;
-    current.cost += entry.meals * entry.ratePerMeal;
-    guestByName.set(entry.guestName, current);
+    guestMealsByName.set(
+      entry.guestName,
+      (guestMealsByName.get(entry.guestName) ?? 0) + entry.meals
+    );
   }
 
   const memberSettlements: MemberSettlement[] = members.map((member) => {
@@ -305,13 +397,11 @@ export async function getMonthlySettlement(
       meals = mealMap.get(id) ?? 0;
       mealCost = meals * mealRate;
     } else if (type === "eggOnly") {
-      const egg = eggByMember.get(id);
-      eggPieces = egg?.pieces ?? 0;
-      eggCost = egg?.cost ?? 0;
+      eggPieces = eggPiecesByMember.get(id) ?? 0;
+      eggCost = eggPieces * EGG_PRICE_PER_PIECE;
     } else if (type === "guest") {
-      const guest = guestByName.get(member.name);
-      guestMeals = guest?.meals ?? 0;
-      guestCost = guest?.cost ?? 0;
+      guestMeals = guestMealsByName.get(member.name) ?? 0;
+      guestCost = guestMeals * GUEST_RATE_PER_MEAL;
     }
 
     const cost = mealCost + eggCost + guestCost;

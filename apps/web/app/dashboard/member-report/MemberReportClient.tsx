@@ -593,7 +593,7 @@ export function MemberReportClient({
           <div className="min-w-0 flex-1">
             <MonthSelector />
           </div>
-          <div className="flex shrink-0 gap-2">
+          <div className="flex w-full flex-col gap-2">
             <Button
               variant="outline"
               onClick={() => window.print()}
