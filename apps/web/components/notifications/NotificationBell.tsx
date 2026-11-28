@@ -117,6 +117,19 @@ export function NotificationBell({
     }
   }, [lang]);
 
+  useEffect(() => {
+    let active = true;
+    fetch("/api/push/status", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data: unknown) => {
+        if (active && data && typeof data === "object" && "enabled" in data) {
+          setPushEnabled((data as { enabled?: unknown }).enabled === true);
+        }
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [pathname]);
+
   // The mobile bell lives in the persistent layout, so it must refresh the
   // badge on navigation instead of only when it first mounts.
   useEffect(() => {
