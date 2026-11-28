@@ -60,6 +60,8 @@ export function NotificationBell({
   const [error, setError] = useState("");
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [markingAll, setMarkingAll] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
 
   const loadCount = useCallback(async () => {
     try {
@@ -144,6 +146,27 @@ export function NotificationBell({
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [open]);
+
+
+  async function enablePush() {
+    setPushBusy(true);
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Push notifications are not supported on this device/browser.");
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") throw new Error("Notification permission was not granted.");
+      const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
+      const keyResponse = await fetch("/api/push/subscribe");
+      const keyData: unknown = await keyResponse.json();
+      const publicKey = keyData && typeof keyData === "object" && "publicKey" in keyData ? (keyData as { publicKey?: unknown }).publicKey : null;
+      if (typeof publicKey !== "string" || !publicKey) throw new Error("Server VAPID public key is missing.");
+      const keyBytes = Uint8Array.from(atob(publicKey.replace(/-/g, "+").replace(/_/g, "/")), (character) => character.charCodeAt(0));
+      const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes });
+      const response = await fetch("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subscription }) });
+      if (!response.ok) throw new Error(await readServerError(response, "Could not save push subscription."));
+      setPushEnabled(true); setError("");
+    } catch (caught) { setError(errorMessage(caught, "Could not enable push notifications.")); }
+    finally { setPushBusy(false); }
+  }
 
   async function markOne(id: string, wasUnread: boolean) {
     setMarkingId(id);
@@ -252,7 +275,7 @@ export function NotificationBell({
                 </span>
               )}
             </div>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1">\n              {!pushEnabled && <Button type="button" variant="ghost" size="sm" className="text-xs app-text-emerald" onClick={() => void enablePush()} disabled={pushBusy}>{pushBusy ? "Enabling…" : "Enable push"}</Button>}
               {unreadCount > 0 && (
                 <Button
                   type="button"
