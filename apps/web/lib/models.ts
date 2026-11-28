@@ -11,6 +11,7 @@ export const COLLECTIONS = {
   months: "months",
   officeLoans: "officeLoans",
   notifications: "notifications",
+  pushSubscriptions: "pushSubscriptions",
 } as const;
 
 export type MemberType = "regular" | "eggOnly" | "guest";
@@ -133,6 +134,14 @@ export type NotificationType =
 export interface LocalizedText {
   bn: string;
   en: string;
+}
+
+export interface PushSubscriptionRecord {
+  _id?: ObjectId;
+  memberId: ObjectId;
+  subscription: { endpoint: string; expirationTime?: number | null; keys: { p256dh: string; auth: string } };
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /** Member-scoped inbox records. `dedupeKey` makes event delivery idempotent. */

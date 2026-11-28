@@ -1,5 +1,6 @@
 import { Db, ObjectId } from "mongodb";
 import type { Lang } from "./lang";
+import { sendMemberPush } from "./push";
 import {
   COLLECTIONS,
   type AppNotification,
@@ -102,6 +103,8 @@ export async function createNotification(
         },
         { upsert: true }
       );
+    const saved = await db.collection<AppNotification>(COLLECTIONS.notifications).findOne({ dedupeKey: input.dedupeKey });
+    if (saved) await sendMemberPush(db, saved).catch(() => undefined);
   } catch (error) {
     if (!isDuplicateKeyError(error)) throw error;
   }
