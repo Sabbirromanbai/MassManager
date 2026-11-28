@@ -275,7 +275,8 @@ export function NotificationBell({
                 </span>
               )}
             </div>
-            <div className="flex shrink-0 items-center gap-1">\n              {!pushEnabled && <Button type="button" variant="ghost" size="sm" className="text-xs app-text-emerald" onClick={() => void enablePush()} disabled={pushBusy}>{pushBusy ? "Enabling…" : "Enable push"}</Button>}
+            <div className="flex shrink-0 items-center gap-1">
+              {!pushEnabled && <Button type="button" variant="ghost" size="sm" className="text-xs app-text-emerald" onClick={() => void enablePush()} disabled={pushBusy}>{pushBusy ? "Enabling…" : "Enable push"}</Button>}
               {unreadCount > 0 && (
                 <Button
                   type="button"
