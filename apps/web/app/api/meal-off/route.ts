@@ -43,7 +43,7 @@ async function getSessionMember(): Promise<{
   };
 }
 
-function getDhakaDate(): { month: string; date: number; hours: number } {
+function getDhakaDate(): { month: string; date: number; hours: number; minutes: number } {
   const now = new Date();
   const dhakaOffset = 6 * 60;
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
@@ -54,6 +54,7 @@ function getDhakaDate(): { month: string; date: number; hours: number } {
     month: `${year}-${month}`,
     date: dhakaTime.getDate(),
     hours: dhakaTime.getHours(),
+    minutes: dhakaTime.getMinutes(),
   };
 }
 
@@ -118,9 +119,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (dhaka.hours >= 10) {
+    if (dhaka.hours > 10 || (dhaka.hours === 10 && dhaka.minutes >= 20)) {
       return NextResponse.json(
-        { error: "Time over, cannot request after 10:00 AM" },
+        { error: "Time over, cannot request after 10:20 AM" },
         { status: 400 }
       );
     }
